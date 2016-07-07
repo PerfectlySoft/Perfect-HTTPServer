@@ -41,7 +41,7 @@ private let httpQuestion = UnicodeScalar(63)
 
 
 class HTTP11Request: HTTPRequest {
-    var method: HTTPMethod  = .get
+    var method: HTTPMethod = .get
     var path = ""
     var queryString = ""
     
