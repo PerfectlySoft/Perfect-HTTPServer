@@ -27,37 +27,6 @@ import PerfectNet
 import PerfectThread
 import PerfectHTTP
 
-extension Double {
-	static var now: Double {
-		var posixTime = timeval()
-		gettimeofday(&posixTime, nil)
-		return Double((posixTime.tv_sec * 1000) + (Int(posixTime.tv_usec)/1000))
-	}
-	
-	func formatDate(format: String) -> String? {
-		var t = tm()
-		var time = time_t(self / 1000.0)
-		gmtime_r(&time, &t)
-		let maxResults = 1024
-		let results = UnsafeMutablePointer<Int8>(allocatingCapacity:  maxResults)
-		defer {
-			results.deallocateCapacity(maxResults)
-		}
-		let res = strftime(results, maxResults, format, &t)
-		if res > 0 {
-			let formatted = String(validatingUTF8: results)
-			return formatted
-		}
-		return nil
-	}
-}
-
-extension Int {
-	func secondsToDate() -> Double {
-		return Double(self * 1000)
-	}
-}
-
 class HTTP11Response: HTTPResponse {
     var status = HTTPResponseStatus.ok
     var headerStore = Array<(HTTPResponseHeader.Name, String)>()
@@ -78,7 +47,6 @@ class HTTP11Response: HTTPResponse {
     var wroteHeaders = false
     var completedCallback: (() -> ())?
     let request: HTTPRequest
-    var cookies = [HTTPCookie]()
     
     lazy var isKeepAlive: Bool = {
         // http 1.1 is keep-alive unless otherwise noted
@@ -120,10 +88,6 @@ class HTTP11Response: HTTPResponse {
 		self.connection.close()
 	}
     
-    func addCookie(_ cookie: HTTPCookie) {
-        cookies.append(cookie)
-    }
-    
     func header(_ named: HTTPResponseHeader.Name) -> String? {
         for (n, v) in headerStore where n == named {
             return v
@@ -149,20 +113,7 @@ class HTTP11Response: HTTPResponse {
         }
         addHeader(name, value: value)
     }
-    
-    func appendBody(bytes: [UInt8]) {
-        bodyBytes.append(contentsOf: bytes)
-    }
-    
-    func appendBody(string: String) {
-        bodyBytes.append(contentsOf: [UInt8](string.utf8))
-    }
-    
-    func setBody(json: [String:Any]) throws {
-        let string = try json.jsonEncodedString()
-        bodyBytes = [UInt8](string.utf8)
-    }
-    
+	
     func flush(callback: (Bool) -> ()) {
         self.push {
             ok in
@@ -187,7 +138,6 @@ class HTTP11Response: HTTPResponse {
         } else if nil == header(.contentLength) {
             setHeader(.contentLength, value: "\(bodyBytes.count)")
         }
-        addCookies()
 		if let filters = self.filters {
 			return filterHeaders(allFilters: filters, callback: callback)
 		}
@@ -327,48 +277,5 @@ class HTTP11Response: HTTPResponse {
                 callback(true)
             }
         }
-    }
-	
-    func addCookies() {
-        for cookie in self.cookies {
-            var cookieLine = ""
-            cookieLine.append(cookie.name!.stringByEncodingURL)
-            cookieLine.append("=")
-            cookieLine.append(cookie.value!.stringByEncodingURL)
-            
-            if let expires = cookie.expires {
-                switch expires {
-                case .session: ()
-                case .absoluteDate(let date):
-                    cookieLine.append(";expires=" + date)
-                case .absoluteSeconds(let seconds):
-                    let formattedDate = (seconds*60).secondsToDate()
-						.formatDate(format: "%a, %d-%b-%Y %T GMT")  ?? "INVALID DATE"
-                    cookieLine.append(";expires=" + formattedDate)
-                case .relativeSeconds(let seconds):
-                    let formattedDate = (Double.now + (seconds*60).secondsToDate())
-						.formatDate(format: "%a, %d-%b-%Y %T GMT") ?? "INVALID DATE"
-                    cookieLine.append(";expires=" + formattedDate)
-                }
-            }
-            if let path = cookie.path {
-                cookieLine.append("; path=" + path)
-            }
-            if let domain = cookie.domain {
-                cookieLine.append("; domain=" + domain)
-            }
-            if let secure = cookie.secure {
-                if secure == true {
-                    cookieLine.append("; secure")
-                }
-            }
-            if let httpOnly = cookie.httpOnly {
-                if httpOnly == true {
-                    cookieLine.append("; HttpOnly")
-                }
-            }
-            addHeader(.setCookie, value: cookieLine)
-        }
-        self.cookies.removeAll()
     }
 }
