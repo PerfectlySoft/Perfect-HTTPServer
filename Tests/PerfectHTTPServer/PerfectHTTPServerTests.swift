@@ -11,16 +11,6 @@ func ShimHTTPRequest() -> HTTP11Request {
 
 class PerfectHTTPServerTests: XCTestCase {
 	
-	func testFormatDate() {
-		let dateThen = 0.0
-		let formatStr = "%a, %d-%b-%Y %T GMT"
-		if let result = dateThen.formatDate(format: formatStr){
-			XCTAssertEqual(result, "Thu, 01-Jan-1970 00:00:00 GMT")
-		} else {
-			XCTAssert(false, "Bad date format")
-		}
-	}
-	
 	func testHPACKEncode() {
 		
 		let encoder = HPACKEncoder(maxCapacity: 256)
@@ -855,7 +845,6 @@ class PerfectHTTPServerTests: XCTestCase {
 
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
         return [
-			("testFormatDate", testFormatDate),
 			("testHPACKEncode", testHPACKEncode),
 			("testWebConnectionHeadersWellFormed", testWebConnectionHeadersWellFormed),
 			("testWebConnectionHeadersLF", testWebConnectionHeadersLF),
