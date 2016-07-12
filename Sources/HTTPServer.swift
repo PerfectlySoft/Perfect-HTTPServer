@@ -28,23 +28,40 @@ public class HTTPServer {
 	private var net: NetTCP?
 	
 	/// The directory in which web documents are sought.
-	public let documentRoot: String
+	/// Setting the document root will add a default URL route which permits
+	/// static files to be served from within.
+	public var documentRoot = "./webroot" { // Given a "safe" default
+		didSet {
+			// !FIX! add default route
+			do {
+				let dir = Dir(documentRoot)
+				if !dir.exists {
+					try Dir(documentRoot).create()
+				}
+			} catch {
+				Log.terminal(message: "The document root \(documentRoot) could not be created.")
+			}
+		}
+	}
 	/// The port on which the server is listening.
 	public var serverPort: UInt16 = 0
-	/// The local address on which the server is listening. The default of 0.0.0.0 indicates any local address.
+	/// The local address on which the server is listening. The default of 0.0.0.0 indicates any address.
 	public var serverAddress = "0.0.0.0"
 	/// Switch to user after binding port
     public var runAsUser: String?
     
 	/// The canonical server name.
-	/// This is important if utilizing the `WebRequest.serverName` "SERVER_NAME" variable.
+	/// This is important if utilizing the `HTTPRequest.serverName` property.
 	public var serverName = ""
+	public var ssl: (sslCert: String, sslKey: String)?
 	
 	private var requestFilters = [[HTTPRequestFilter]]()
 	private var responseFilters = [[HTTPResponseFilter]]()
 	
-	/// Initialize the server with a document root.
-	/// - parameter documentRoot: The document root for the server.
+	/// Initialize the server object.
+	public init() {}
+	
+	@available(*, deprecated, message: "Set documentRoot directly")
 	public init(documentRoot: String) {
 		self.documentRoot = documentRoot
 	}
@@ -89,87 +106,76 @@ public class HTTPServer {
 		return self
 	}
 	
-	/// Start the server on the indicated TCP port and optional address.
-	/// - parameter port: The port on which to bind.
-	/// - parameter bindAddress: The local address on which to bind.
+	@available(*, deprecated, message: "Set serverPort and call start()")
 	public func start(port: UInt16, bindAddress: String = "0.0.0.0") throws {
 		self.serverPort = port
 		self.serverAddress = bindAddress
-		let socket = NetTCP()
-		socket.initSocket()
-		try socket.bind(port: port, address: bindAddress)
-        if let runAs = self.runAsUser {
-            try PerfectServer.switchTo(userName: runAs)
-        }
-        Log.info(message: "Starting HTTP server on \(bindAddress):\(port) with document root \(self.documentRoot)")
-		
-		try self.startInner(socket: socket)
+		try self.start()
 	}
 	
-	/// Start the server on the indicated TCP port and optional address.
-	/// - parameter port: The port on which to bind.
-	/// - parameter sslCert: The server SSL certificate file.
-	/// - parameter sslKey: The server SSL key file.
-	/// - parameter bindAddress: The local address on which to bind.
+	@available(*, deprecated, message: "Set serverPort and ssl directly then call start()")
 	public func start(port: UInt16, sslCert: String, sslKey: String, bindAddress: String = "0.0.0.0") throws {
-		
 		self.serverPort = port
 		self.serverAddress = bindAddress
-		
-		let socket = NetTCPSSL()
-		socket.initSocket()
-		
-		let cipherList = [
-			"ECDHE-ECDSA-AES256-GCM-SHA384",
-			"ECDHE-ECDSA-AES128-GCM-SHA256",
-			"ECDHE-ECDSA-AES256-CBC-SHA384",
-			"ECDHE-ECDSA-AES256-CBC-SHA",
-			"ECDHE-ECDSA-AES128-CBC-SHA256",
-			"ECDHE-ECDSA-AES128-CBC-SHA",
-			"ECDHE-RSA-AES256-GCM-SHA384",
-			"ECDHE-RSA-AES128-GCM-SHA256",
-			"ECDHE-RSA-AES256-CBC-SHA384",
-			"ECDHE-RSA-AES128-CBC-SHA256",
-			"ECDHE-RSA-AES128-CBC-SHA",
-			"ECDHE-RSA-AES256-SHA384",
-			"ECDHE-ECDSA-AES256-SHA384",
-			"ECDHE-RSA-AES256-SHA",
-			"ECDHE-ECDSA-AES256-SHA"
-		]
-		socket.cipherList = cipherList
-		guard socket.useCertificateChainFile(cert: sslCert) else {
-			let code = Int32(socket.errorCode())
-			throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
-		}
-		guard socket.usePrivateKeyFile(cert: sslKey) else {
-			let code = Int32(socket.errorCode())
-			throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
-		}
-		guard socket.checkPrivateKey() else {
-			let code = Int32(socket.errorCode())
-			throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
-		}
-		try socket.bind(port: port, address: bindAddress)
-        if let runAs = self.runAsUser {
-            try PerfectServer.switchTo(userName: runAs)
-        }
-        Log.info(message: "Starting HTTPS server on \(bindAddress):\(port) with document root \(self.documentRoot)")
-		try self.startInner(socket: socket)
+		self.ssl = (sslCert: sslCert, sslKey: sslKey)
+		try self.start()
 	}
 	
-	private func startInner(socket sock: NetTCP) throws {
-		sock.listen()
-		self.net = sock
-		defer { sock.close() }
-		self.start()
+	/// Start the server. Does not return until the server terminates.
+	public func start() throws {
+		if let (cert, key) = ssl {
+			let socket = NetTCPSSL()
+			socket.initSocket()
+			socket.cipherList = [
+				"ECDHE-ECDSA-AES256-GCM-SHA384",
+				"ECDHE-ECDSA-AES128-GCM-SHA256",
+				"ECDHE-ECDSA-AES256-CBC-SHA384",
+				"ECDHE-ECDSA-AES256-CBC-SHA",
+				"ECDHE-ECDSA-AES128-CBC-SHA256",
+				"ECDHE-ECDSA-AES128-CBC-SHA",
+				"ECDHE-RSA-AES256-GCM-SHA384",
+				"ECDHE-RSA-AES128-GCM-SHA256",
+				"ECDHE-RSA-AES256-CBC-SHA384",
+				"ECDHE-RSA-AES128-CBC-SHA256",
+				"ECDHE-RSA-AES128-CBC-SHA",
+				"ECDHE-RSA-AES256-SHA384",
+				"ECDHE-ECDSA-AES256-SHA384",
+				"ECDHE-RSA-AES256-SHA",
+				"ECDHE-ECDSA-AES256-SHA"
+			]
+			guard socket.useCertificateChainFile(cert: cert) else {
+				let code = Int32(socket.errorCode())
+				throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+			}
+			guard socket.usePrivateKeyFile(cert: key) else {
+				let code = Int32(socket.errorCode())
+				throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+			}
+			guard socket.checkPrivateKey() else {
+				let code = Int32(socket.errorCode())
+				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
+			}
+			self.net = socket
+		} else {
+			self.net = NetTCP()
+			self.net?.initSocket()
+		}
+        Log.info(message: "Starting HTTP server on \(serverAddress):\(serverPort) with document root \(self.documentRoot)")
+		try self.startInner()
 	}
 	
-	func start() {
-		guard let n = self.net else {
+	private func startInner() throws {
+		guard let sock = self.net else {
 			Log.terminal(message: "Server could not be started. Socket was not initialized.")
 		}
-		self.serverAddress = n.sockName().0
-		n.forEachAccept {
+		try sock.bind(port: serverPort, address: serverAddress)
+		if let runAs = self.runAsUser {
+			try PerfectServer.switchTo(userName: runAs)
+		}
+		sock.listen()
+		defer { sock.close() }
+		self.serverAddress = sock.sockName().0
+		sock.forEachAccept {
 			[weak self] net in
 			guard let net = net else {
 				return
