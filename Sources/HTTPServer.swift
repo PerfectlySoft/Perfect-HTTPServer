@@ -38,6 +38,11 @@ public class HTTPServer {
 				if !dir.exists {
 					try Dir(documentRoot).create()
 				}
+				self.routes.add(method: .get, uri: "/**", handler: {
+					request, response in
+					StaticFileHandler().handleRequest(request: request, response: response)
+					}
+				)
 			} catch {
 				Log.terminal(message: "The document root \(documentRoot) could not be created.")
 			}
@@ -58,12 +63,21 @@ public class HTTPServer {
 	private var requestFilters = [[HTTPRequestFilter]]()
 	private var responseFilters = [[HTTPResponseFilter]]()
 	
+	/// Routing support
+	private var routes = Routes()
+	private var routeNavigator: RouteNavigator?
+	
 	/// Initialize the server object.
 	public init() {}
 	
 	@available(*, deprecated, message: "Set documentRoot directly")
 	public init(documentRoot: String) {
 		self.documentRoot = documentRoot
+	}
+	
+	/// Add the Routes to this server.
+	public func addRoutes(_ routes: Routes) {
+		self.routes.add(routes: routes)
 	}
 	
 	/// Set the request filters. Each is provided along with its priority.
@@ -165,6 +179,12 @@ public class HTTPServer {
 	}
 	
 	private func startInner() throws {
+		// 1.0 compatability ONLY
+		if let compatRoutes = compatRoutes {
+			self.addRoutes(compatRoutes)
+		}
+		self.routeNavigator = self.routes.navigator
+		
 		guard let sock = self.net else {
 			Log.terminal(message: "Server could not be started. Socket was not initialized.")
 		}
@@ -196,6 +216,7 @@ public class HTTPServer {
 	
 	func handleConnection(_ net: NetTCP) {
 		let req = HTTP11Request(connection: net)
+		req.serverName = self.serverName
 		req.readRequest { [weak self]
             status in
 			if case .ok = status {
@@ -233,42 +254,49 @@ public class HTTPServer {
             }
         }
 		if requestFilters.isEmpty {
-			HTTPServer.routeRequest(request, response: response)
+			routeRequest(request, response: response)
 		} else {
-			HTTPServer.filterRequest(request, response: response, allFilters: requestFilters.makeIterator())
+			filterRequest(request, response: response, allFilters: requestFilters.makeIterator())
 		}
 	}
 	
-	private static func filterRequest(_ request: HTTPRequest, response: HTTPResponse, allFilters: IndexingIterator<[[HTTPRequestFilter]]>) {
+	private func filterRequest(_ request: HTTPRequest, response: HTTPResponse, allFilters: IndexingIterator<[[HTTPRequestFilter]]>) {
 		var filters = allFilters
 		if let prioFilters = filters.next() {
-			HTTPServer.filterRequest(request, response: response, allFilters: filters, prioFilters: prioFilters.makeIterator())
+			filterRequest(request, response: response, allFilters: filters, prioFilters: prioFilters.makeIterator())
 		} else {
-			HTTPServer.routeRequest(request, response: response)
+			routeRequest(request, response: response)
 		}
 	}
 	
-	private static func filterRequest(_ request: HTTPRequest, response: HTTPResponse,
+	private func filterRequest(_ request: HTTPRequest, response: HTTPResponse,
 	                                  allFilters: IndexingIterator<[[HTTPRequestFilter]]>,
 	                                  prioFilters: IndexingIterator<[HTTPRequestFilter]>) {
 		var prioFilters = prioFilters
 		guard let filter = prioFilters.next() else {
-			return HTTPServer.filterRequest(request, response: response, allFilters: allFilters)
+			return filterRequest(request, response: response, allFilters: allFilters)
 		}
 		filter.filter(request: request, response: response) {
 			result in
 			switch result {
 			case .continue(let req, let res):
-				HTTPServer.filterRequest(req, response: res, allFilters: allFilters, prioFilters: prioFilters)
+				self.filterRequest(req, response: res, allFilters: allFilters, prioFilters: prioFilters)
 			case .execute(let req, let res):
-				HTTPServer.filterRequest(req, response: res, allFilters: allFilters)
+				self.filterRequest(req, response: res, allFilters: allFilters)
 			case .halt(_, let res):
 				res.completed()
 			}
 		}
 	}
 	
-	private static func routeRequest(_ req: HTTPRequest, response: HTTPResponse) {
-		Routing.handleRequest(req, response: response)
+	private func routeRequest(_ request: HTTPRequest, response: HTTPResponse) {
+		let pathInfo = request.path
+		if let nav = self.routeNavigator, handler = nav.findHandler(uri: pathInfo, webRequest: request) {
+			handler(request, response)
+		} else {
+			response.status = .notFound
+			response.appendBody(string: "The file \(pathInfo) was not found.")
+			response.completed()
+		}
 	}
 }

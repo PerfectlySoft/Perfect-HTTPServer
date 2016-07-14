@@ -11,6 +11,11 @@ func ShimHTTPRequest() -> HTTP11Request {
 
 class PerfectHTTPServerTests: XCTestCase {
 	
+	override func setUp() {
+		super.setUp()
+		compatRoutes = nil
+	}
+	
 	func testHPACKEncode() {
 		
 		let encoder = HPACKEncoder(maxCapacity: 256)
@@ -179,21 +184,22 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testSimpleHandler() {
-		PerfectServer.initializeServices()
-		
 		let port = 8282 as UInt16
 		let msg = "Hello, world!"
-		Routing.Routes["/"] = {
-			request, response in
-			response.addHeader(.contentType, value: "text/plain")
-			response.appendBody(string: msg)
-			response.completed()
-		}
+		var routes = Routes()
+		routes.add(method: .get, uri: "/", handler: {
+				request, response in
+				response.addHeader(.contentType, value: "text/plain")
+				response.appendBody(string: msg)
+				response.completed()
+			}
+		)
 		let serverExpectation = self.expectation(withDescription: "server")
 		let clientExpectation = self.expectation(withDescription: "client")
 		
-		let server = HTTPServer(documentRoot: "./webroot")
-		
+		let server = HTTPServer()
+		server.addRoutes(routes)
+		server.serverPort = port
 		func endClient() {
 			server.stop()
 			clientExpectation.fulfill()
@@ -201,7 +207,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		Threading.dispatch {
 			do {
-				try server.start(port: port)
+				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
 				XCTAssert(false, "Network error thrown: \(err) \(msg)")
 			} catch {
@@ -259,25 +265,27 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testSimpleStreamingHandler() {
-		PerfectServer.initializeServices()
-		
 		let port = 8282 as UInt16
-		Routing.Routes["/"] = {
-			request, response in
-			response.addHeader(.contentType, value: "text/plain")
-			response.isStreaming = true
-			response.appendBody(string: "A")
-			response.push {
-				ok in
-				XCTAssert(ok, "Failed in .push")
-				response.appendBody(string: "BC")
-				response.completed()
+		var routes = Routes()
+		routes.add(method: .get, uri: "/", handler: {
+				request, response in
+				response.addHeader(.contentType, value: "text/plain")
+				response.isStreaming = true
+				response.appendBody(string: "A")
+				response.push {
+					ok in
+					XCTAssert(ok, "Failed in .push")
+					response.appendBody(string: "BC")
+					response.completed()
+				}
 			}
-		}
+		)
 		let serverExpectation = self.expectation(withDescription: "server")
 		let clientExpectation = self.expectation(withDescription: "client")
 		
-		let server = HTTPServer(documentRoot: "./webroot")
+		let server = HTTPServer()
+		server.serverPort = port
+		server.addRoutes(routes)
 		
 		func endClient() {
 			server.stop()
@@ -286,7 +294,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		Threading.dispatch {
 			do {
-				try server.start(port: port)
+				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
 				XCTAssert(false, "Network error thrown: \(err) \(msg)")
 			} catch {
@@ -357,20 +365,22 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testSlowClient() {
-		PerfectServer.initializeServices()
-		
 		let port = 8282 as UInt16
 		let msg = "Hello, world!"
-		Routing.Routes["/"] = {
-			request, response in
-			response.addHeader(.contentType, value: "text/plain")
-			response.appendBody(string: msg)
-			response.completed()
-		}
+		var routes = Routes()
+		routes.add(method: .get, uri: "/", handler: {
+				request, response in
+				response.addHeader(.contentType, value: "text/plain")
+				response.appendBody(string: msg)
+				response.completed()
+			}
+		)
 		let serverExpectation = self.expectation(withDescription: "server")
 		let clientExpectation = self.expectation(withDescription: "client")
 		
-		let server = HTTPServer(documentRoot: "./webroot")
+		let server = HTTPServer()
+		server.serverPort = port
+		server.addRoutes(routes)
 		
 		func endClient() {
 			server.stop()
@@ -379,7 +389,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		Threading.dispatch {
 			do {
-				try server.start(port: port)
+				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
 				XCTAssert(false, "Network error thrown: \(err) \(msg)")
 			} catch {
@@ -444,8 +454,6 @@ class PerfectHTTPServerTests: XCTestCase {
 	static var oneSet = false, twoSet = false, threeSet = false
 	
 	func testRequestFilters() {
-		PerfectServer.initializeServices()
-		
 		let port = 8282 as UInt16
 		let msg = "Hello, world!"
 		
@@ -483,20 +491,22 @@ class PerfectHTTPServerTests: XCTestCase {
 		}
 		
 		let requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [(Filter1(), HTTPFilterPriority.high), (Filter2(), HTTPFilterPriority.medium), (Filter3(), HTTPFilterPriority.medium), (Filter4(), HTTPFilterPriority.low)]
-		
-		Routing.Routes["/"] = {
-			request, response in
-			XCTAssert(false, "This handler should not execute")
-			response.addHeader(.contentType, value: "text/plain")
-			response.appendBody(string: msg)
-			response.completed()
-		}
+		var routes = Routes()
+		routes.add(method: .get, uri: "/", handler: {
+				request, response in
+				XCTAssert(false, "This handler should not execute")
+				response.addHeader(.contentType, value: "text/plain")
+				response.appendBody(string: msg)
+				response.completed()
+			}
+		)
 		let serverExpectation = self.expectation(withDescription: "server")
 		let clientExpectation = self.expectation(withDescription: "client")
 		
-		let server = HTTPServer(documentRoot: "./webroot")
+		let server = HTTPServer()
 		server.setRequestFilters(requestFilters)
-		
+		server.serverPort = port
+		server.addRoutes(routes)
 		func endClient() {
 			server.stop()
 			clientExpectation.fulfill()
@@ -504,7 +514,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		Threading.dispatch {
 			do {
-				try server.start(port: port)
+				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
 				XCTAssert(false, "Network error thrown: \(err) \(msg)")
 			} catch {
@@ -557,7 +567,6 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testResponseFilters() {
-		PerfectServer.initializeServices()
 		let port = 8282 as UInt16
 		
 		struct Filter1: HTTPResponseFilter {
@@ -611,17 +620,21 @@ class PerfectHTTPServerTests: XCTestCase {
 			(Filter4(), HTTPFilterPriority.low)
 		]
 		
-		Routing.Routes["/"] = {
-			request, response in
-			response.addHeader(.contentType, value: "text/plain")
-			response.appendBody(string: "ABZABZ")
-			response.completed()
-		}
+		var routes = Routes()
+		routes.add(method: .get, uri: "/", handler: {
+				request, response in
+				response.addHeader(.contentType, value: "text/plain")
+				response.appendBody(string: "ABZABZ")
+				response.completed()
+			}
+		)
 		let serverExpectation = self.expectation(withDescription: "server")
 		let clientExpectation = self.expectation(withDescription: "client")
 		
-		let server = HTTPServer(documentRoot: "./webroot")
+		let server = HTTPServer()
 		server.setResponseFilters(responseFilters)
+		server.serverPort = port
+		server.addRoutes(routes)
 		
 		func endClient() {
 			server.stop()
@@ -630,7 +643,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		Threading.dispatch {
 			do {
-				try server.start(port: port)
+				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
 				XCTAssert(false, "Network error thrown: \(err) \(msg)")
 			} catch {
@@ -695,7 +708,6 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testStreamingResponseFilters() {
-		PerfectServer.initializeServices()
 		let port = 8282 as UInt16
 		
 		struct Filter1: HTTPResponseFilter {
@@ -749,22 +761,26 @@ class PerfectHTTPServerTests: XCTestCase {
 			(Filter4(), HTTPFilterPriority.low)
 		]
 		
-		Routing.Routes["/"] = {
-			request, response in
-			response.addHeader(.contentType, value: "text/plain")
-			response.isStreaming = true
-			response.appendBody(string: "ABZ")
-			response.push {
-				_ in
+		var routes = Routes()
+		routes.add(method: .get, uri: "/", handler: {
+				request, response in
+				response.addHeader(.contentType, value: "text/plain")
+				response.isStreaming = true
 				response.appendBody(string: "ABZ")
-				response.completed()
+				response.push {
+					_ in
+					response.appendBody(string: "ABZ")
+					response.completed()
+				}
 			}
-		}
+		)
 		let serverExpectation = self.expectation(withDescription: "server")
 		let clientExpectation = self.expectation(withDescription: "client")
 		
-		let server = HTTPServer(documentRoot: "./webroot")
+		let server = HTTPServer()
 		server.setResponseFilters(responseFilters)
+		server.serverPort = port
+		server.addRoutes(routes)
 		
 		func endClient() {
 			server.stop()
@@ -773,7 +789,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		Threading.dispatch {
 			do {
-				try server.start(port: port)
+				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
 				XCTAssert(false, "Network error thrown: \(err) \(msg)")
 			} catch {
