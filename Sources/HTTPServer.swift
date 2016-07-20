@@ -40,9 +40,8 @@ public class HTTPServer {
 				}
 				self.routes.add(method: .get, uri: "/**", handler: {
 					request, response in
-					StaticFileHandler().handleRequest(request: request, response: response)
-					}
-				)
+					StaticFileHandler(documentRoot: request.documentRoot).handleRequest(request: request, response: response)
+				})
 			} catch {
 				Log.terminal(message: "The document root \(documentRoot) could not be created.")
 			}
