@@ -80,7 +80,7 @@ public class HTTPServer {
 	}
 	
 	/// Set the request filters. Each is provided along with its priority.
-	/// The filters can be provided in any order. High priority filters will be sorted able lower priorities.
+	/// The filters can be provided in any order. High priority filters will be sorted above lower priorities.
 	/// Filters of equal priority will maintain the order given here.
 	@discardableResult
 	public func setRequestFilters(_ request: [(HTTPRequestFilter, HTTPFilterPriority)]) -> HTTPServer {
@@ -100,7 +100,7 @@ public class HTTPServer {
 	}
 	
 	/// Set the response filters. Each is provided along with its priority.
-	/// The filters can be provided in any order. High priority filters will be sorted able lower priorities.
+	/// The filters can be provided in any order. High priority filters will be sorted above lower priorities.
 	/// Filters of equal priority will maintain the order given here.
 	@discardableResult
 	public func setResponseFilters(_ response: [(HTTPResponseFilter, HTTPFilterPriority)]) -> HTTPServer {
