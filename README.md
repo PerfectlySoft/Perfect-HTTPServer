@@ -109,6 +109,9 @@ do {
 }
 ```
 
-In Xcode, you will need to select the executable scheme before you launch the server. This selection will need to be redone each time you generate an Xcode project file from the command line.
+In Xcode, you will need to select the executable scheme before you launch the server. This selection will need to be redone each time you generate an Xcode project file from the command line. Set the working directory to be your Project directory by choosing Edit Scheme, select Run, and under Options, check use custom working directory, then choose the project root. Again, this will need to be updated anytime you regenerate your project file.
+
+In Xcode choose run to build and run your server. Test by going to 0.0.0.0:8181 in your browser to see the Hello World message. The server will also serve any static files you place in the webroot directory.
+
 
 
