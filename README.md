@@ -24,7 +24,7 @@ The following will clone an empty starter project:
 git clone https://github.com/PerfectlySoft/PerfectTemplate.git
 cd PerfectTemplate
 ```
-Add to the Package.swift file the dependency:
+Verify the Package.swift file contains the dependency:
 ```
 let package = Package(
  name: "PerfectTemplate",
@@ -34,21 +34,27 @@ let package = Package(
     ]
 )
 ```
+
+The name in the Package object in your Package.swift file will be the executable name for your project.
+
 Create the Xcode project:
 ```
 swift package generate-xcodeproj
 ```
+
+The Swift Package Manager will download the required dependencies into a Packages directory and build an appropriate Xcode Project file.
+
 Open the generated PerfectTemplate.xcodeproj file in Xcode.
 
-The project will now build in Xcode and start a server on localhost port 8181.
+The project can now build in Xcode and start a server on localhost port 8181.
 
 Important: When a dependancy has been added to the project, the Swift Package Manager must be invoked to generate a new Xcode project file. Be aware that any customizations that have been made to this file will be lost.
 
 ## Creating an HTTPServer and registering webroot
 
-Open main.swift from the Sources directory and edit according to the following instructions:
+Open main.swift from the Sources directory and confirm the following code is in place:
 
-Update import statements to include 
+verify import statements include 
 ```
 import PerfectLib
 import PerfectHTTP
@@ -85,11 +91,14 @@ server.documentRoot = "./webroot"
 
 Gather command line options and further configure the server.
 Run the server with --help to see the list of supported arguments.
-Command line arguments will supplant any of the values set above.
+Command line arguments will supplant any of the values set above. 
+
+The arguments.swift file provides handlers for command line arguments as well as the configureServer function. Call this to handle any CLI arguments before starting the server process.
+
 ```
 configureServer(server)
 ```
-Launch the server. Remember that any command after server.start() will not be reached.
+This code block will launch the server. Remember that any command after server.start() will not be reached.
 ```
 do {
 	// Launch the HTTP server.
@@ -99,3 +108,7 @@ do {
 	print("Network error thrown: \(err) \(msg)")
 }
 ```
+
+In Xcode, you will need to select the executable scheme before you launch the server. This selection will need to be redone each time you generate an Xcode project file from the command line.
+
+
