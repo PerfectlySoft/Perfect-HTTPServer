@@ -198,7 +198,7 @@ class HTTP11Request: HTTPRequest {
         }
         self.connection.readSomeBytes(count: size) {
             [weak self] b in
-            if let b = b where b.count > 0 {
+            if let b = b, b.count > 0 {
                 self?.putPostData(b)
                 self?.readBody(count: size - b.count, callback: callback)
 				return
@@ -438,8 +438,8 @@ class HTTP11Request: HTTPRequest {
     
     func putPostData(_ b: [UInt8]) {
         if self.workingBuffer.count == 0 && self.mimes == nil {
-            if let contentType = self.contentType
-				where contentType.characters.starts(with: "multipart/form-data".characters) {
+            if let contentType = self.contentType,
+				contentType.characters.starts(with: "multipart/form-data".characters) {
                 self.mimes = MimeReader(contentType)
             }
         }

@@ -194,8 +194,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(withDescription: "server")
-		let clientExpectation = self.expectation(withDescription: "client")
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
 		
 		let server = HTTPServer()
 		server.addRoutes(routes)
@@ -238,7 +238,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						net.readSomeBytes(count: 1024) {
 							bytes in
 							
-							guard let bytes = bytes where bytes.count > 0 else {
+							guard let bytes = bytes, bytes.count > 0 else {
 								XCTAssert(false, "Could not read bytes from server")
 								return endClient()
 							}
@@ -258,7 +258,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			}
 		}
 		
-		self.waitForExpectations(withTimeout: 10000, handler: {
+		self.waitForExpectations(timeout: 10000, handler: {
 			_ in
 			
 		})
@@ -280,8 +280,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				}
 			}
 		)
-		let serverExpectation = self.expectation(withDescription: "server")
-		let clientExpectation = self.expectation(withDescription: "client")
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
 		
 		let server = HTTPServer()
 		server.serverPort = port
@@ -325,7 +325,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						net.readSomeBytes(count: 2048) {
 							bytes in
 							
-							guard let bytes = bytes where bytes.count > 0 else {
+							guard let bytes = bytes, bytes.count > 0 else {
 								XCTAssert(false, "Could not read bytes from server")
 								return endClient()
 							}
@@ -358,7 +358,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			}
 		}
 		
-		self.waitForExpectations(withTimeout: 10000, handler: {
+		self.waitForExpectations(timeout: 10000, handler: {
 			_ in
 			
 		})
@@ -375,8 +375,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(withDescription: "server")
-		let clientExpectation = self.expectation(withDescription: "client")
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
 		
 		let server = HTTPServer()
 		server.serverPort = port
@@ -426,7 +426,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							Threading.sleep(seconds: 2.0)
 							net.readSomeBytes(count: 1024) {
 								bytes in
-								guard let bytes = bytes where bytes.count > 0 else {
+								guard let bytes = bytes, bytes.count > 0 else {
 									XCTAssert(false, "Could not read bytes from server")
 									return endClient()
 								}
@@ -445,7 +445,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			}
 		}
 		
-		self.waitForExpectations(withTimeout: 20000, handler: {
+		self.waitForExpectations(timeout: 20000, handler: {
 			_ in
 			
 		})
@@ -500,8 +500,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(withDescription: "server")
-		let clientExpectation = self.expectation(withDescription: "client")
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
 		
 		let server = HTTPServer()
 		server.setRequestFilters(requestFilters)
@@ -545,7 +545,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						net.readSomeBytes(count: 1024) {
 							bytes in
 							
-							guard let bytes = bytes where bytes.count > 0 else {
+							guard let bytes = bytes, bytes.count > 0 else {
 								XCTAssert(false, "Could not read bytes from server")
 								return endClient()
 							}
@@ -560,7 +560,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			}
 		}
 		
-		self.waitForExpectations(withTimeout: 10000, handler: {
+		self.waitForExpectations(timeout: 10000, handler: {
 			_ in
 			XCTAssert(PerfectHTTPServerTests.oneSet && PerfectHTTPServerTests.twoSet && PerfectHTTPServerTests.threeSet)
 		})
@@ -628,8 +628,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(withDescription: "server")
-		let clientExpectation = self.expectation(withDescription: "client")
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
 		
 		let server = HTTPServer()
 		server.setResponseFilters(responseFilters)
@@ -674,7 +674,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						net.readSomeBytes(count: 2048) {
 							bytes in
 							
-							guard let bytes = bytes where bytes.count > 0 else {
+							guard let bytes = bytes, bytes.count > 0 else {
 								XCTAssert(false, "Could not read bytes from server")
 								return endClient()
 							}
@@ -702,7 +702,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			}
 		}
 		
-		self.waitForExpectations(withTimeout: 10000, handler: {
+		self.waitForExpectations(timeout: 10000, handler: {
 			_ in
 		})
 	}
@@ -774,8 +774,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				}
 			}
 		)
-		let serverExpectation = self.expectation(withDescription: "server")
-		let clientExpectation = self.expectation(withDescription: "client")
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
 		
 		let server = HTTPServer()
 		server.setResponseFilters(responseFilters)
@@ -820,7 +820,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						net.readSomeBytes(count: 2048) {
 							bytes in
 							
-							guard let bytes = bytes where bytes.count > 0 else {
+							guard let bytes = bytes, bytes.count > 0 else {
 								XCTAssert(false, "Could not read bytes from server")
 								return endClient()
 							}
@@ -854,7 +854,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			}
 		}
 		
-		self.waitForExpectations(withTimeout: 10000, handler: {
+		self.waitForExpectations(timeout: 10000, handler: {
 			_ in
 		})
 	}

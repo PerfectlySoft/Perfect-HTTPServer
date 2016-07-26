@@ -16,7 +16,6 @@ If you are starting out with Perfect look at the main [Perfect](https://github.c
 
 If you are beginning a new project with Perfect look at the [PerfectTemplate](https://github.com/PerfectlySoft/PerfectTemplate) project for starter instructions.
 
-
 ## QuickStart
 
 The following will clone an empty starter project:
@@ -114,4 +113,13 @@ In Xcode, you will need to select the executable scheme before you launch the se
 In Xcode choose run to build and run your server. Test by going to 0.0.0.0:8181 in your browser to see the Hello World message. The server will also serve any static files you place in the webroot directory.
 
 
+
+=======
+## Issues
+
+We are transitioning to using JIRA for all bugs and support related issues, therefore the GitHub issues has been disabled.
+
+If you find a mistake, bug, or any other helpful suggestion you'd like to make on the docs please head over to [http://jira.perfect.org:8080/servicedesk/customer/portal/1](http://jira.perfect.org:8080/servicedesk/customer/portal/1) and raise it.
+
+A comprehensive list of open issues can be found at [http://jira.perfect.org:8080/projects/ISS/issues](http://jira.perfect.org:8080/projects/ISS/issues)
 
