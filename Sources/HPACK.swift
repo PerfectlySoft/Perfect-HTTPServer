@@ -641,7 +641,7 @@ final class HuffmanEncoder {
 
 final class HuffmanDecoder {
 	
-	enum Exception: ErrorProtocol {
+	enum Exception: Error {
 		case eosDecoded, invalidPadding
 	}
 	
@@ -1072,7 +1072,7 @@ final class HPACKEncoder {
 /// Decoding takes a HeaderListener object which receives each field/value as they are decoded.
 final class HPACKDecoder {
 	
-	enum Exception: ErrorProtocol {
+	enum Exception: Error {
 		case decompressionException, illegalIndexValue, invalidMaxDynamicTableSize, maxDynamicTableSizeChangeRequested
 	}
 	

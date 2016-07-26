@@ -404,7 +404,7 @@ public class HTTP2Client {
 //					let priority = (frame.flags & HTTP2_PRIORITY) != 0
 //					let end = (frame.flags & HTTP2_END_HEADERS) != 0
 
-					if let ba = frame.payload where ba.count > 0 {
+					if let ba = frame.payload, ba.count > 0 {
 						let bytes = Bytes(existingBytes: ba)
 						var padLength: UInt8 = 0
 //										var streamDep = UInt32(0)
@@ -424,7 +424,7 @@ public class HTTP2Client {
 						callback(response, nil)
 					}
 				case HTTP2_DATA:
-					if let payload = frame.payload where frame.length > 0 {
+					if let payload = frame.payload, frame.length > 0 {
                         response.appendBody(bytes: payload)
 					}
 					streamOpen = (frame.flags & HTTP2_END_STREAM) == 0
@@ -458,7 +458,7 @@ public class HTTP2Client {
 
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":method", valueStr: method.description)
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":scheme", valueStr: scheme)
-			try encoder.encodeHeader(out: headerBytes, nameStr: ":path", valueStr: path ?? "/", sensitive: false, incrementalIndexing: false)
+			try encoder.encodeHeader(out: headerBytes, nameStr: ":path", valueStr: path, sensitive: false, incrementalIndexing: false)
 			try encoder.encodeHeader(out: headerBytes, nameStr: "host", valueStr: self.host)
 			try encoder.encodeHeader(out: headerBytes, nameStr: "content-length", valueStr: "\(request.postBodyBytes?.count ?? 0)")
 
@@ -479,7 +479,7 @@ public class HTTP2Client {
 			callback(nil, "Header encoding exception \(error)")
 			return
 		}
-		let hasData = request.postBodyBytes?.count > 0
+		let hasData = nil != request.postBodyBytes && request.postBodyBytes!.count > 0
 		let frame = HTTP2Frame(length: UInt32(headerBytes.data.count), type: HTTP2_HEADERS, flags: HTTP2_END_HEADERS | (hasData ? 0 : HTTP2_END_STREAM), streamId: streamId, payload: headerBytes.data)
 		self.writeHTTP2Frame(frame) { [weak self]
 			b in
