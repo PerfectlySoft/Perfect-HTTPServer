@@ -1,5 +1,8 @@
 # Perfect-HTTPServer
 
+[![Gitter](https://badges.gitter.im/PerfectlySoft/PerfectDocs.svg)](https://gitter.im/PerfectlySoft/PerfectDocs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+
 HTTP 1.1 Server for Perfect
 
 [![GitHub version](https://badge.fury.io/gh/PerfectlySoft%2FPerfect-HTTPServer.svg)](https://badge.fury.io/gh/PerfectlySoft%2FPerfect-HTTPServer)
