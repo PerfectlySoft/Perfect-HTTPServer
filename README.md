@@ -19,12 +19,12 @@ If you are beginning a new project with Perfect look at the [PerfectTemplate](ht
 ## QuickStart
 
 The following will clone an empty starter project:
-```
+```swift
 git clone https://github.com/PerfectlySoft/PerfectTemplate.git
 cd PerfectTemplate
 ```
 Verify the Package.swift file contains the dependency:
-```
+```swift
 let package = Package(
  name: "PerfectTemplate",
  targets: [],
@@ -37,7 +37,7 @@ let package = Package(
 The name in the Package object in your Package.swift file will be the executable name for your project.
 
 Create the Xcode project:
-```
+```swift
 swift package generate-xcodeproj
 ```
 
@@ -54,13 +54,13 @@ Important: When a dependancy has been added to the project, the Swift Package Ma
 Open main.swift from the Sources directory and confirm the following code is in place:
 
 verify import statements include 
-```
+```swift
 import PerfectLib
 import PerfectHTTP
 import PerfectHTTPServer
 ```
 Create an instance of HTTPServer and add routes:
-```
+```swift
 // Create HTTP server.
 let server = HTTPServer()
 
@@ -78,7 +78,7 @@ server.addRoutes(routes)
 ```
 
 Verify server settings: 
-```
+```swift
 // Set a listen port of 8181
 server.serverPort = 8181
 
@@ -94,11 +94,11 @@ Command line arguments will supplant any of the values set above.
 
 The arguments.swift file provides handlers for command line arguments as well as the configureServer function. Call this to handle any CLI arguments before starting the server process.
 
-```
+```swift
 configureServer(server)
 ```
 This code block will launch the server. Remember that any command after server.start() will not be reached.
-```
+```swift
 do {
 	// Launch the HTTP server.
 	try server.start()
