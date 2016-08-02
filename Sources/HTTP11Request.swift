@@ -246,7 +246,7 @@ class HTTP11Request: HTTPRequest {
         self.path = pathInfo
         self.queryString = queryString
         
-        if hvers == "1.1" {
+        if hvers == "HTTP/1.1" {
             self.protocolVersion = (1, 1)
         }
         
