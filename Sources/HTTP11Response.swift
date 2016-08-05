@@ -114,7 +114,7 @@ class HTTP11Response: HTTPResponse {
         addHeader(name, value: value)
     }
 	
-    func flush(callback: (Bool) -> ()) {
+    func flush(callback: @escaping (Bool) -> ()) {
         self.push {
             ok in
             guard ok else {
@@ -128,7 +128,7 @@ class HTTP11Response: HTTPResponse {
         }
     }
     
-    func pushHeaders(callback: (Bool) -> ()) {
+    func pushHeaders(callback: @escaping (Bool) -> ()) {
         wroteHeaders = true
         if isKeepAlive {
             addHeader(.connection, value: "Keep-Alive")
@@ -144,7 +144,7 @@ class HTTP11Response: HTTPResponse {
 		finishPushHeaders(callback: callback)
     }
 	
-	func filterHeaders(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: (Bool) -> ()) {
+	func filterHeaders(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: @escaping (Bool) -> ()) {
 		var allFilters = allFilters
 		if let prioFilters = allFilters.next() {
 			return filterHeaders(allFilters: allFilters, prioFilters: prioFilters.makeIterator(), callback: callback)
@@ -154,7 +154,7 @@ class HTTP11Response: HTTPResponse {
 	
 	func filterHeaders(allFilters: IndexingIterator<[[HTTPResponseFilter]]>,
 	                   prioFilters: IndexingIterator<[HTTPResponseFilter]>,
-	                   callback: (Bool) -> ()) {
+	                   callback: @escaping (Bool) -> ()) {
 		var prioFilters = prioFilters
 		guard let filter = prioFilters.next() else {
 			return filterHeaders(allFilters: allFilters, callback: callback)
@@ -172,7 +172,7 @@ class HTTP11Response: HTTPResponse {
 		}
 	}
 
-	func finishPushHeaders(callback: (Bool) -> ()) {
+	func finishPushHeaders(callback: @escaping (Bool) -> ()) {
 		var responseString = "HTTP/\(request.protocolVersion.0).\(request.protocolVersion.1) \(status)\r\n"
 		for (n, v) in headers {
 			responseString.append("\(n.standardName): \(v)\r\n")
@@ -187,7 +187,7 @@ class HTTP11Response: HTTPResponse {
 		}
 	}
 	
-	func filterBodyBytes(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: (bodyBytes: [UInt8]) -> ()) {
+	func filterBodyBytes(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: ([UInt8]) -> ()) {
 		var allFilters = allFilters
 		if let prioFilters = allFilters.next() {
 			return filterBodyBytes(allFilters: allFilters, prioFilters: prioFilters.makeIterator(), callback: callback)
@@ -197,7 +197,7 @@ class HTTP11Response: HTTPResponse {
 	
 	func filterBodyBytes(allFilters: IndexingIterator<[[HTTPResponseFilter]]>,
 	                     prioFilters: IndexingIterator<[HTTPResponseFilter]>,
-	                     callback: (bodyBytes: [UInt8]) -> ()) {
+	                     callback: ([UInt8]) -> ()) {
 		var prioFilters = prioFilters
 		guard let filter = prioFilters.next() else {
 			return filterBodyBytes(allFilters: allFilters, callback: callback)
@@ -215,20 +215,20 @@ class HTTP11Response: HTTPResponse {
 		}
 	}
 	
-	func finishFilterBodyBytes(callback: (bodyBytes: [UInt8]) -> ()) {
+	func finishFilterBodyBytes(callback: (_ bodyBytes: [UInt8]) -> ()) {
 		let bytes = self.bodyBytes
 		self.bodyBytes = [UInt8]()
-		callback(bodyBytes: bytes)
+		callback(bytes)
 	}
 	
-	func filteredBodyBytes(callback: (bodyBytes: [UInt8]) -> ()) {
+	func filteredBodyBytes(callback: (_ bodyBytes: [UInt8]) -> ()) {
 		if let filters = self.filters {
 			return filterBodyBytes(allFilters: filters, callback: callback)
 		}
 		finishFilterBodyBytes(callback: callback)
 	}
 	
-    func push(callback: (Bool) -> ()) {
+    func push(callback: @escaping (Bool) -> ()) {
         if !wroteHeaders {
             return pushHeaders(callback: callback)
 		}
@@ -241,7 +241,7 @@ class HTTP11Response: HTTPResponse {
 		}
     }
     
-    func pushStreamed(bytes: [UInt8], callback: (Bool) -> ()) {
+    func pushStreamed(bytes: [UInt8], callback: @escaping (Bool) -> ()) {
 		let bodyCount = bytes.count
 		guard bodyCount > 0 else {
 			return callback(true)
@@ -263,7 +263,7 @@ class HTTP11Response: HTTPResponse {
 		}
     }
     
-    func pushNonStreamed(bytes: [UInt8], callback: (Bool) -> ()) {
+    func pushNonStreamed(bytes: [UInt8], callback: @escaping (Bool) -> ()) {
         let bodyCount = bytes.count
         guard bodyCount > 0 else {
             return callback(true)

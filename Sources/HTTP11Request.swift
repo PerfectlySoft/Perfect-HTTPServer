@@ -223,7 +223,7 @@ class HTTP11Request: HTTPRequest {
             if httpSpace == c {
                 break
             }
-            method.append(c)
+            method.append(String(Character(c)))
         }
         var gotQuest = false
         while let c = gen.next() {
@@ -231,15 +231,15 @@ class HTTP11Request: HTTPRequest {
                 break
             }
             if gotQuest {
-                queryString.append(c)
+                queryString.append(String(Character(c)))
             } else if httpQuestion == c {
                 gotQuest = true
             } else {
-                pathInfo.append(c)
+                pathInfo.append(String(Character(c)))
             }
         }
         while let c = gen.next() {
-            hvers.append(c)
+            hvers.append(String(Character(c)))
         }
         
         self.method = HTTPMethod.from(string: method)
@@ -339,7 +339,7 @@ class HTTP11Request: HTTPRequest {
     }
     
     func headerToString() -> String? {
-        return String(validatingUTF8: UnsafePointer<CChar>(self.workingBuffer))
+		return String(validatingUTF8: UnsafeMutableRawPointer(mutating: self.workingBuffer).assumingMemoryBound(to: CChar.self))
     }
     
     // The headers have been read completely

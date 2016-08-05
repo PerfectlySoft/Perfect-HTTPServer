@@ -332,7 +332,7 @@ public class HTTP2Client {
 		return self.net.isValid
 	}
 
-	public func connect(host hst: String, port: UInt16, ssl: Bool, timeoutSeconds: Double, callback: (Bool) -> ()) {
+	public func connect(host hst: String, port: UInt16, ssl: Bool, timeoutSeconds: Double, callback: @escaping (Bool) -> ()) {
 		self.host = hst
 		self.ssl = ssl
 		self.timeoutSeconds = timeoutSeconds
@@ -444,7 +444,7 @@ public class HTTP2Client {
 		}
 	}
 
-	public func sendRequest(_ request: HTTPRequest, callback: (HTTPResponse?, String?) -> ()) {
+	public func sendRequest(_ request: HTTPRequest, callback: @escaping (HTTPResponse?, String?) -> ()) {
 		let streamId = self.newStreamId
 		self.streams[streamId] = .idle
 
@@ -513,7 +513,7 @@ public class HTTP2Client {
 		}
 	}
 
-	func completeConnect(_ callback: (Bool) -> ()) {
+	func completeConnect(_ callback: @escaping (Bool) -> ()) {
 		net.write(string: "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n") {
 			wrote in
 
@@ -547,7 +547,7 @@ public class HTTP2Client {
 		return HTTP2Frame(length: payloadLength, type: type, flags: flags, streamId: sid, payload: nil)
 	}
 
-	func readHTTP2Frame(timeout time: Double, callback: (HTTP2Frame?) -> ()) {
+	func readHTTP2Frame(timeout time: Double, callback: @escaping (HTTP2Frame?) -> ()) {
 		let net = self.net
 		net.readBytesFully(count: 9, timeoutSeconds: time) {
 			bytes in
