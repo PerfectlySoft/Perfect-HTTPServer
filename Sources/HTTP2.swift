@@ -142,7 +142,7 @@ final class HTTP2Response: HTTP11Response, HeaderListener {
 	}
 }
 
-public class HTTP2Client {
+open class HTTP2Client {
 
 	enum StreamState {
 		case none, idle, reservedLocal, reservedRemote, open, halfClosedRemote, halfClosedLocal, closed
