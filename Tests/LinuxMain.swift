@@ -1,5 +1,5 @@
 import XCTest
-@testable import PerfectHTTPServerTestSuite
+@testable import PerfectHTTPServerTests
 
 XCTMain([
      testCase(PerfectHTTPServerTests.allTests),
