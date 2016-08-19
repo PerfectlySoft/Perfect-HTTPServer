@@ -157,7 +157,7 @@ class HTTP11Request: HTTPRequest {
         setHeader(HTTPRequestHeader.Name.fromStandard(name: lowered), value: value)
     }
     
-    func readRequest(callback: StatusCallback) {
+    func readRequest(callback: @escaping StatusCallback) {
         self.readHeaders { status in
             if case .ok = status {
                 self.readBody(callback: callback)
@@ -167,14 +167,14 @@ class HTTP11Request: HTTPRequest {
         }
     }
     
-    func readHeaders(_ callback: StatusCallback) {
+    func readHeaders(_ callback: @escaping StatusCallback) {
         self.connection.readSomeBytes(count: httpReadSize) {
             b in
             self.didReadHeaderData(b, callback: callback)
         }
     }
     
-    func readBody(callback: StatusCallback) {
+    func readBody(callback: @escaping StatusCallback) {
         let cl = self.contentLength
         guard cl > 0 else {
             return callback(.ok)
@@ -192,7 +192,7 @@ class HTTP11Request: HTTPRequest {
         self.readBody(count: cl - workingDiff, callback: callback)
     }
     
-    func readBody(count size: Int, callback: StatusCallback) {
+    func readBody(count size: Int, callback: @escaping StatusCallback) {
         guard size > 0 else {
             return callback(.ok)
         }
@@ -376,7 +376,7 @@ class HTTP11Request: HTTPRequest {
     // if full headers have not been read, read more data
     // self.workingBufferOffset indicates where we start scanning
     // if the buffer ends on a single CR or CRLF pair, back the self.workingBufferOffset up
-    func scanWorkingBuffer(_ callback: StatusCallback) {
+    func scanWorkingBuffer(_ callback: @escaping StatusCallback) {
         guard self.workingBuffer.count < httpMaxHeadersSize else {
             return callback(.requestEntityTooLarge)
         }
@@ -421,7 +421,7 @@ class HTTP11Request: HTTPRequest {
         self.readHeaders(callback)
     }
     
-    func didReadHeaderData(_ b:[UInt8]?, callback: StatusCallback) {
+    func didReadHeaderData(_ b:[UInt8]?, callback: @escaping StatusCallback) {
         guard let b = b else {
             return callback(.requestTimeout)
         }
