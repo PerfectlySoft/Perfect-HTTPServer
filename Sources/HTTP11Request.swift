@@ -54,8 +54,9 @@ class HTTP11Request: HTTPRequest {
     var serverAddress = (host: "", port: 0 as UInt16)
     var serverName = ""
     var documentRoot = "./webroot"
-    var urlVariables = [String:String]()
-    
+	var urlVariables = [String:String]()
+	var scratchPad = [String:Any]()
+	
     private var headerStore = Dictionary<HTTPRequestHeader.Name, String>()
     
     var headers: AnyIterator<(HTTPRequestHeader.Name, String)> {
