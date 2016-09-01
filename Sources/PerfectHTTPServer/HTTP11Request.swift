@@ -51,14 +51,14 @@ class HTTP11Request: HTTPRequest {
     }()
     
     var protocolVersion = (1, 0)
-    var remoteAddress = (host: "", port: 0 as UInt16)
+	var remoteAddress: (host: String, port: UInt16) { return connection.peerName() }
     var serverAddress = (host: "", port: 0 as UInt16)
     var serverName = ""
     var documentRoot = "./webroot"
 	var urlVariables = [String:String]()
 	var scratchPad = [String:Any]()
 	
-    private var headerStore = Dictionary<HTTPRequestHeader.Name, String>()
+    private var headerStore = Dictionary<HTTPRequestHeader.Name, [UInt8]>()
     
     var headers: AnyIterator<(HTTPRequestHeader.Name, String)> {
         var g = self.headerStore.makeIterator()
@@ -66,7 +66,7 @@ class HTTP11Request: HTTPRequest {
             guard let n = g.next() else {
                 return nil
             }
-            return (n.key, n.value)
+            return (n.key, UTF8Encoding.encode(bytes: n.value))
         }
     }
     
@@ -118,14 +118,18 @@ class HTTP11Request: HTTPRequest {
     var mimes: MimeReader?
     
     var contentType: String? {
-        return self.headerStore[.contentType]
+		guard let v = self.headerStore[.contentType] else {
+			return nil
+		}
+		return UTF8Encoding.encode(bytes: v)
     }
     
     lazy var contentLength: Int = {
         guard let cl = self.headerStore[.contentLength] else {
             return 0
         }
-        return Int(cl) ?? 0
+		let conv = UTF8Encoding.encode(bytes: cl)
+        return Int(conv) ?? 0
     }()
     
     typealias StatusCallback = (HTTPResponseStatus) -> ()
@@ -278,16 +282,13 @@ class HTTP11Request: HTTPRequest {
 				self.method = HTTPMethod.from(string: String(validatingUTF8: methodName) ?? "GET")
 			}
 			self.protocolVersion = (Int(self.parser.http_major), Int(self.parser.http_minor))
-			let (remoteHost, remotePort) = self.connection.peerName()
-			self.remoteAddress = (remoteHost, remotePort)
 			self.workingBuffer.removeAll()
 		case .headerField:
 			self.lastHeaderName = UTF8Encoding.encode(bytes: self.workingBuffer)
 			self.workingBuffer.removeAll()
 		case .headerValue:
 			if let name = self.lastHeaderName {
-				let headerValue = UTF8Encoding.encode(bytes: self.workingBuffer)
-				self.setHeader(named: name, value: headerValue)
+				self.setHeader(named: name, value: self.workingBuffer)
 			}
 			self.lastHeaderName = nil
 			self.workingBuffer.removeAll()
@@ -301,28 +302,34 @@ class HTTP11Request: HTTPRequest {
 	}
 	
     func header(_ named: HTTPRequestHeader.Name) -> String? {
-        return headerStore[named]
+		guard let v = headerStore[named] else {
+			return nil
+		}
+		return UTF8Encoding.encode(bytes: v)
     }
     
     func addHeader(_ named: HTTPRequestHeader.Name, value: String) {
         guard let existing = headerStore[named] else {
-            self.headerStore[named] = value
+            self.headerStore[named] = [UInt8](value.utf8)
             return
         }
+		let valueBytes = [UInt8](value.utf8)
+		let newValue: [UInt8]
         if named == .cookie {
-            self.headerStore[named] = existing + "; " + value
+            newValue = existing + "; ".utf8 + valueBytes
         } else {
-            self.headerStore[named] = existing + ", " + value
+            newValue = existing + ", ".utf8 + valueBytes
         }
+		self.headerStore[named] = newValue
     }
     
     func setHeader(_ named: HTTPRequestHeader.Name, value: String) {
-        headerStore[named] = value
+        headerStore[named] = [UInt8](value.utf8)
     }
     
-    func setHeader(named: String, value: String) {
+    func setHeader(named: String, value: [UInt8]) {
         let lowered = named.lowercased()
-        setHeader(HTTPRequestHeader.Name.fromStandard(name: lowered), value: value)
+        headerStore[HTTPRequestHeader.Name.fromStandard(name: lowered)] = value
     }
     
     func readRequest(callback: @escaping StatusCallback) {
