@@ -67,9 +67,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		let fullHeaders = "GET / HTTP/1.1\r\nX-Foo: bar\r\nX-Bar: \r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"
 		
-		connection.workingBuffer = UTF8Encoding.decode(string: fullHeaders)
-		
-		connection.scanWorkingBuffer {
+		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
 			
 			guard case .ok = ok else {
@@ -78,7 +76,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			XCTAssertTrue(connection.header(.custom(name: "x-foo")) == "bar", "\(connection.headers)")
 			XCTAssertTrue(connection.header(.custom(name: "x-bar")) == "", "\(connection.headers)")
 			XCTAssertTrue(connection.contentType == "application/x-www-form-urlencoded", "\(connection.headers)")
-		}
+		})
 	}
 	
 	func testWebConnectionHeadersLF() {
@@ -86,9 +84,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		let fullHeaders = "GET / HTTP/1.1\nX-Foo: bar\nX-Bar: \nContent-Type: application/x-www-form-urlencoded\n\n"
 		
-		connection.workingBuffer = UTF8Encoding.decode(string: fullHeaders)
-		
-		connection.scanWorkingBuffer {
+		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
 			
 			guard case .ok = ok else {
@@ -97,7 +93,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			XCTAssertTrue(connection.header(.custom(name: "x-foo")) == "bar", "\(connection.headers)")
 			XCTAssertTrue(connection.header(.custom(name: "x-bar")) == "", "\(connection.headers)")
 			XCTAssertTrue(connection.contentType == "application/x-www-form-urlencoded", "\(connection.headers)")
-		}
+		})
 	}
 	
 	func testWebConnectionHeadersMalormed() {
@@ -105,15 +101,13 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		let fullHeaders = "GET / HTTP/1.1\r\nX-Foo: bar\rX-Bar: \r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"
 		
-		connection.workingBuffer = UTF8Encoding.decode(string: fullHeaders)
-		
-		connection.scanWorkingBuffer {
+		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
 			
 			guard case .badRequest = ok else {
 				return XCTAssert(false, "\(ok)")
 			}
-		}
+		})
 	}
 	
 	func testWebConnectionHeadersFolded() {
@@ -121,39 +115,36 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		let fullHeaders = "GET / HTTP/1.1\r\nX-Foo: bar\r\n bar\r\nX-Bar: foo\r\n  foo\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"
 		
-		connection.workingBuffer = UTF8Encoding.decode(string: fullHeaders)
-		
-		connection.scanWorkingBuffer {
+		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
 			
 			guard case .ok = ok else {
 				return XCTAssert(false, "\(ok)")
 			}
-			XCTAssertTrue(connection.header(.custom(name: "x-foo")) == "barbar", "\(connection.headers)")
-			XCTAssertTrue(connection.header(.custom(name: "x-bar")) == "foo foo", "\(connection.headers)")
+			let wasFoldedValue = connection.header(.custom(name: "x-foo"))
+			XCTAssertTrue(wasFoldedValue == "bar bar", "\(connection.headers)")
+			XCTAssertTrue(connection.header(.custom(name: "x-bar")) == "foo  foo", "\(connection.headers)")
 			XCTAssertTrue(connection.contentType == "application/x-www-form-urlencoded", "\(connection.headers)")
-		}
+		})
 	}
 	
 	func testWebConnectionHeadersTooLarge() {
 		let connection = ShimHTTPRequest()
 		
 		var fullHeaders = "GET / HTTP/1.1\r\nX-Foo:"
-		for _ in 0..<(1024*10) {
+		for _ in 0..<(1024*81) {
 			fullHeaders.append(" bar")
 		}
 		fullHeaders.append("\r\n\r\n")
 		
-		connection.workingBuffer = UTF8Encoding.decode(string: fullHeaders)
-		
-		connection.scanWorkingBuffer {
+		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
 			
 			guard case .requestEntityTooLarge = ok else {
 				return XCTAssert(false, "\(ok)")
 			}
 			XCTAssert(true)
-		}
+		})
 	}
 	
 	func testWebRequestQueryParam() {

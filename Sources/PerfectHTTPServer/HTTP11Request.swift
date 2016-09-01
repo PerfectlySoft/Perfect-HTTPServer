@@ -353,7 +353,12 @@ class HTTP11Request: HTTPRequest {
 		_ = UnsafePointer(b).withMemoryRebound(to: Int8.self, capacity: b.count) {
 			http_parser_execute(&parser, &parserSettings, $0, b.count)
 		}
-		guard self.parser.http_errno == 0 else {
+		let http_errno = self.parser.http_errno
+		guard HPE_HEADER_OVERFLOW.rawValue != http_errno else {
+			callback(.requestEntityTooLarge)
+			return false
+		}
+		guard http_errno == 0 else {
 			callback(.badRequest)
 			return false
 		}
