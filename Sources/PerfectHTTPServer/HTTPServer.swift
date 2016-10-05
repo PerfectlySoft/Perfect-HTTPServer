@@ -22,6 +22,13 @@ import PerfectThread
 import PerfectLib
 import PerfectHTTP
 
+#if os(Linux)
+	import SwiftGlibc
+	import LinuxBridge
+#else
+	import Darwin
+#endif
+
 /// Stand-alone HTTP server. Provides the same WebConnection based interface as the FastCGI server.
 public class HTTPServer {
 	
@@ -214,6 +221,10 @@ public class HTTPServer {
 	}
 	
 	func handleConnection(_ net: NetTCP) {
+		
+		var flag = 1
+		_ = setsockopt(net.fd.fd, IPPROTO_TCP, TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
+		
 		let req = HTTP11Request(connection: net)
 		req.serverName = self.serverName
 		req.readRequest { [weak self]
