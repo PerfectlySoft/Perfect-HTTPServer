@@ -199,6 +199,10 @@ public class HTTPServer {
 			try PerfectServer.switchTo(userName: runAs)
 		}
 		sock.listen()
+		
+		var flag = 1
+		_ = setsockopt(sock.fd.fd, IPPROTO_TCP, TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
+		
 		defer { sock.close() }
 		self.serverAddress = sock.sockName().0
 		sock.forEachAccept {
@@ -221,10 +225,10 @@ public class HTTPServer {
 	}
 	
 	func handleConnection(_ net: NetTCP) {
-		
+	#if os(Linux)
 		var flag = 1
 		_ = setsockopt(net.fd.fd, IPPROTO_TCP, TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
-		
+	#endif
 		let req = HTTP11Request(connection: net)
 		req.serverName = self.serverName
 		req.readRequest { [weak self]
