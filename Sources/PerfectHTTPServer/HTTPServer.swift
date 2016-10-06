@@ -201,7 +201,7 @@ public class HTTPServer {
 		sock.listen()
 		
 		var flag = 1
-		_ = setsockopt(sock.fd.fd, IPPROTO_TCP, TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
+		_ = setsockopt(sock.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
 		
 		defer { sock.close() }
 		self.serverAddress = sock.sockName().0
@@ -227,7 +227,7 @@ public class HTTPServer {
 	func handleConnection(_ net: NetTCP) {
 	#if os(Linux)
 		var flag = 1
-		_ = setsockopt(net.fd.fd, IPPROTO_TCP, TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
+		_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
 	#endif
 		let req = HTTP11Request(connection: net)
 		req.serverName = self.serverName
