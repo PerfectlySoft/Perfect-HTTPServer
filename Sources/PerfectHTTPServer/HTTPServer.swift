@@ -223,7 +223,7 @@ public class HTTPServer {
 	func handleConnection(_ net: NetTCP) {
 		
 		var flag = 1
-		_ = setsockopt(net.fd.fd, IPPROTO_TCP, TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
+		_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
 		
 		let req = HTTP11Request(connection: net)
 		req.serverName = self.serverName
