@@ -265,10 +265,15 @@ class HTTP11Request: HTTPRequest {
 		case .url:
 			let urlString = UTF8Encoding.encode(bytes: self.workingBuffer)
 			let urlStringSplit = urlString.characters.split(separator: "?")
+			self.path = "/"
 			if urlStringSplit.count > 0 {
-				self.path = String(urlStringSplit[0])
-			} else {
-				self.path = "/"
+				let pathStr = String(urlStringSplit[0])
+				let components = pathStr.filePathComponents
+				let joinedComponents = components.flatMap { ($0.isEmpty || $0 == "/") ? nil : $0.stringByDecodingURL }.joined(separator: "/")
+				self.path.append(joinedComponents)
+				if pathStr.hasSuffix("/") {
+					self.path.append("/")
+				}
 			}
 			if urlStringSplit.count > 1 {
 				self.queryString = String(urlStringSplit[1])
