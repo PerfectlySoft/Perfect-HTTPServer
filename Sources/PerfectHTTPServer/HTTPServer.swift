@@ -66,6 +66,23 @@ public class HTTPServer {
 	public var serverName = ""
 	public var ssl: (sslCert: String, sslKey: String)?
 	
+	public var cipherList = [
+					"ECDHE-ECDSA-AES256-GCM-SHA384",
+					"ECDHE-ECDSA-AES128-GCM-SHA256",
+					"ECDHE-ECDSA-AES256-CBC-SHA384",
+					"ECDHE-ECDSA-AES256-CBC-SHA",
+					"ECDHE-ECDSA-AES128-CBC-SHA256",
+					"ECDHE-ECDSA-AES128-CBC-SHA",
+					"ECDHE-RSA-AES256-GCM-SHA384",
+					"ECDHE-RSA-AES128-GCM-SHA256",
+					"ECDHE-RSA-AES256-CBC-SHA384",
+					"ECDHE-RSA-AES128-CBC-SHA256",
+					"ECDHE-RSA-AES128-CBC-SHA",
+					"ECDHE-RSA-AES256-SHA384",
+					"ECDHE-ECDSA-AES256-SHA384",
+					"ECDHE-RSA-AES256-SHA",
+					"ECDHE-ECDSA-AES256-SHA"]
+
 	private var requestFilters = [[HTTPRequestFilter]]()
 	private var responseFilters = [[HTTPResponseFilter]]()
 	
@@ -146,23 +163,8 @@ public class HTTPServer {
 		if let (cert, key) = ssl {
 			let socket = NetTCPSSL()
 			socket.initSocket()
-			socket.cipherList = [
-				"ECDHE-ECDSA-AES256-GCM-SHA384",
-				"ECDHE-ECDSA-AES128-GCM-SHA256",
-				"ECDHE-ECDSA-AES256-CBC-SHA384",
-				"ECDHE-ECDSA-AES256-CBC-SHA",
-				"ECDHE-ECDSA-AES128-CBC-SHA256",
-				"ECDHE-ECDSA-AES128-CBC-SHA",
-				"ECDHE-RSA-AES256-GCM-SHA384",
-				"ECDHE-RSA-AES128-GCM-SHA256",
-				"ECDHE-RSA-AES256-CBC-SHA384",
-				"ECDHE-RSA-AES128-CBC-SHA256",
-				"ECDHE-RSA-AES128-CBC-SHA",
-				"ECDHE-RSA-AES256-SHA384",
-				"ECDHE-ECDSA-AES256-SHA384",
-				"ECDHE-RSA-AES256-SHA",
-				"ECDHE-ECDSA-AES256-SHA"
-			]
+			socket.cipherList = self.cipherList
+			
 			guard socket.useCertificateChainFile(cert: cert) else {
 				let code = Int32(socket.errorCode())
 				throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
