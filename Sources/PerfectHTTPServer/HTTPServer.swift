@@ -65,6 +65,8 @@ public class HTTPServer {
 	/// This is important if utilizing the `HTTPRequest.serverName` property.
 	public var serverName = ""
 	public var ssl: (sslCert: String, sslKey: String)?
+	public var caCert: String?
+	public var certVerifyMode: OpenSSLVerifyMode?
 	
 	public var cipherList = [
 					"ECDHE-ECDSA-AES256-GCM-SHA384",
@@ -164,6 +166,16 @@ public class HTTPServer {
 			let socket = NetTCPSSL()
 			socket.initSocket()
 			socket.cipherList = self.cipherList
+			
+			if let verifyMode = certVerifyMode,
+				let cert = caCert,
+				verifyMode != .sslVerifyNone {
+				
+				guard socket.setClientCA(path: cert, verifyMode: verifyMode) else {
+					let code = Int32(socket.errorCode())
+					throw PerfectError.networkError(code, "Error setting clientCA : \(socket.errorStr(forCode: code))")
+				}
+			}
 			
 			guard socket.useCertificateChainFile(cert: cert) else {
 				let code = Int32(socket.errorCode())
