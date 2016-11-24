@@ -102,7 +102,7 @@ public class HTTPServer {
 	
 	/// Add the Routes to this server.
 	public func addRoutes(_ routes: Routes) {
-		self.routes.add(routes: routes)
+		self.routes.add(routes)
 	}
 	
 	/// Set the request filters. Each is provided along with its priority.
@@ -113,15 +113,9 @@ public class HTTPServer {
 		let high = request.filter { $0.1 == HTTPFilterPriority.high }.map { $0.0 },
 		    med = request.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
 		    low = request.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
-		if !high.isEmpty {
-			requestFilters.append(high)
-		}
-		if !med.isEmpty {
-			requestFilters.append(med)
-		}
-		if !low.isEmpty {
-			requestFilters.append(low)
-		}
+		requestFilters.append(high)
+		requestFilters.append(med)
+		requestFilters.append(low)
 		return self
 	}
 	
@@ -133,15 +127,9 @@ public class HTTPServer {
 		let high = response.filter { $0.1 == HTTPFilterPriority.high }.map { $0.0 },
 			med = response.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
 			low = response.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
-		if !high.isEmpty {
-			responseFilters.append(high)
-		}
-		if !med.isEmpty {
-			responseFilters.append(med)
-		}
-		if !low.isEmpty {
-			responseFilters.append(low)
-		}
+		responseFilters.append(high)
+		responseFilters.append(med)
+		responseFilters.append(low)
 		return self
 	}
 	
