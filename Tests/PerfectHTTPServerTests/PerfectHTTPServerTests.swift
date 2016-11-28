@@ -149,16 +149,18 @@ class PerfectHTTPServerTests: XCTestCase {
 	
 	func testWebRequestQueryParam() {
 		let req = ShimHTTPRequest()
-		req.queryString = "yabba=dabba&doo=fi+☃&fi=&fo=fum"
+		req.queryString = "yabba=dabba&y=asd==&doo=fi+☃&fi=&fo=fum"
 		XCTAssert(req.param(name: "doo") == "fi ☃")
 		XCTAssert(req.param(name: "fi") == "")
+		XCTAssert(req.param(name: "y") == "asd==")
 	}
 	
 	func testWebRequestPostParam() {
 		let req = ShimHTTPRequest()
-		req.postBodyBytes = Array("yabba=dabba&doo=fi+☃&fi=&fo=fum".utf8)
+		req.postBodyBytes = Array("yabba=dabba&y=asd==&doo=fi+☃&fi=&fo=fum".utf8)
 		XCTAssert(req.param(name: "doo") == "fi ☃")
 		XCTAssert(req.param(name: "fi") == "")
+		XCTAssert(req.param(name: "y") == "asd==")
 	}
 	
 	func testWebRequestCookie() {
