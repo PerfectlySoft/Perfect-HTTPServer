@@ -29,7 +29,7 @@ import PerfectHTTP
 	import Darwin
 #endif
 
-/// Stand-alone HTTP server. Provides the same WebConnection based interface as the FastCGI server.
+/// Stand-alone HTTP server.
 public class HTTPServer {
 	
 	private var net: NetTCP?
@@ -59,8 +59,8 @@ public class HTTPServer {
 	/// The local address on which the server is listening. The default of 0.0.0.0 indicates any address.
 	public var serverAddress = "0.0.0.0"
 	/// Switch to user after binding port
-    public var runAsUser: String?
-    
+	public var runAsUser: String?
+
 	/// The canonical server name.
 	/// This is important if utilizing the `HTTPRequest.serverName` property.
 	public var serverName = ""
@@ -178,11 +178,12 @@ public class HTTPServer {
 				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
 			}
 			self.net = socket
+			Log.info(message: "Starting HTTPS server \(serverName) on \(serverAddress):\(serverPort)")
 		} else {
 			self.net = NetTCP()
 			self.net?.initSocket()
+			Log.info(message: "Starting HTTP server \(serverName) on \(serverAddress):\(serverPort)")
 		}
-        Log.info(message: "Starting HTTP server on \(serverAddress):\(serverPort) with document root \(self.documentRoot)")
 		try self.startInner()
 	}
 	

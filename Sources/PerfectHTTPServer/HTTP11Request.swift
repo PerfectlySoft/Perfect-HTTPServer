@@ -271,7 +271,7 @@ class HTTP11Request: HTTPRequest {
 				let components = pathStr.filePathComponents
 				let joinedComponents = components.flatMap { ($0.isEmpty || $0 == "/") ? nil : $0.stringByDecodingURL }.joined(separator: "/")
 				self.path.append(joinedComponents)
-				if pathStr.hasSuffix("/") {
+				if pathStr.hasSuffix("/") && self.path != "/" {
 					self.path.append("/")
 				}
 			}
