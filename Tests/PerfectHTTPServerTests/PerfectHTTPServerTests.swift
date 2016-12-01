@@ -852,45 +852,45 @@ class PerfectHTTPServerTests: XCTestCase {
 		})
 	}
 	
-	func testServerConf1() {
-		let confData = [
-			"servers": [
-				[
-					"name":"localhost",
-					"port":8080,
-					"routes":[
-						["method":"get", "uri":"/**", "handler":"PerfectHTTPServer.HTTPHandler.staticFiles",
-						 "documentRoot":"./webroot"]
-					],
-					"filters":[
-						["type":"request",
-						 "priority":"high",
-						 "name":"PerfectHTTPServer.HTTPFilter.customReqFilter"],
-						["type":"response",
-						 "priority":"high",
-						 "name":"PerfectHTTPServer.HTTPFilter.custom404",
-						 "path":"./webroot/404.html"]
-					],
-					"tlsConfig":["certPath":"/Users/kjessup/new.cert.pem"]
-				],
-				[
-					"name":"localhost redirect",
-					"port":8181,
-					"routes":[
-						["method":"get", "uri":"/**", "handler":"PerfectHTTPServer.HTTPHandler.redirect",
-						 "base":"https://localhost:8080"]
-					]
-				]
-			]
-		]
-		
-		do {
-			try HTTPServer.launch(configurationData: confData)
-		} catch {
-			return XCTAssert(false, "Error: \(error)")
-		}
-		XCTAssert(true)
-	}
+//	func testServerConf1() {
+//		let confData = [
+//			"servers": [
+//				[
+//					"name":"localhost",
+//					"port":8080,
+//					"routes":[
+//						["method":"get", "uri":"/**", "handler":"PerfectHTTPServer.HTTPHandler.staticFiles",
+//						 "documentRoot":"./webroot"]
+//					],
+//					"filters":[
+//						["type":"request",
+//						 "priority":"high",
+//						 "name":"PerfectHTTPServer.HTTPFilter.customReqFilter"],
+//						["type":"response",
+//						 "priority":"high",
+//						 "name":"PerfectHTTPServer.HTTPFilter.custom404",
+//						 "path":"./webroot/404.html"]
+//					],
+//					"tlsConfig":["certPath":"/Users/kjessup/new.cert.pem"]
+//				],
+//				[
+//					"name":"localhost redirect",
+//					"port":8181,
+//					"routes":[
+//						["method":"get", "uri":"/**", "handler":"PerfectHTTPServer.HTTPHandler.redirect",
+//						 "base":"https://localhost:8080"]
+//					]
+//				]
+//			]
+//		]
+//		
+//		do {
+//			try HTTPServer.launch(configurationData: confData)
+//		} catch {
+//			return XCTAssert(false, "Error: \(error)")
+//		}
+//		XCTAssert(true)
+//	}
 
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
         return [
