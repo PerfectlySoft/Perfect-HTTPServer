@@ -143,6 +143,12 @@ public extension HTTPServer {
 		                                responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
 			return HTTPServer.Server(tlsConfig: tlsConfig, name: name, port: port, routes: Routes(routes), runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
+		
+		public static func secureServer(_ tlsConfig: TLSConfiguration, name: String, port: Int, routes: Routes, runAs: String? = nil,
+		                                requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
+		                                responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
+			return HTTPServer.Server(tlsConfig: tlsConfig, name: name, port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+		}
 	}
 }
 
