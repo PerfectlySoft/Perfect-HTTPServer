@@ -237,7 +237,7 @@ func filtersFrom(data: [[String:Any]]) throws -> [(HTTPResponseFilter, HTTPFilte
 
 // -------------------------------------------
 
-public extension HTTPHandler {
+public struct HTTPHandler {
 	/// Returns a handler which will serve static files out of the indicated directory.
 	/// If allowResponseFilters is false (which is the default) then the file will be sent in
 	/// the most efficient way possible and output filters will be bypassed.
