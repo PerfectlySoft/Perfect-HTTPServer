@@ -274,30 +274,6 @@ public extension HTTPServer {
 	}
 }
 
-public struct HTTPHandler {
-	/*
-	/// Returns a handler which will serve static files out of the indicated directory.
-	/// If allowResponseFilters is false (which is the default) then the file will be sent in
-	/// the most effecient way possible and output filters will be bypassed.
-	public static func staticFiles(documentRoot: String, allowResponseFilters: Bool = false) -> RequestHandler {
-		return {
-			req, resp in
-			StaticFileHandler(documentRoot: documentRoot, allowResponseFilters: allowResponseFilters)
-				.handleRequest(request: req, response: resp)
-		}
-	}
-	
-	public static func redirect(base: String) -> RequestHandler {
-		return {
-			req, resp in
-			resp.status = .movedPermanently
-			resp.setHeader(.location, value: base + req.uri)
-			resp.completed()
-		}
-	}
-*/
-}
-
 private extension HTTPServer.Server {
 	init(data: [String:Any]) throws {
 		guard let name = data["name"] as? String else {

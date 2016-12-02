@@ -238,6 +238,9 @@ func filtersFrom(data: [[String:Any]]) throws -> [(HTTPResponseFilter, HTTPFilte
 // -------------------------------------------
 
 public extension HTTPHandler {
+	/// Returns a handler which will serve static files out of the indicated directory.
+	/// If allowResponseFilters is false (which is the default) then the file will be sent in
+	/// the most efficient way possible and output filters will be bypassed.
 	public static func staticFiles(data: [String:Any]) throws -> RequestHandler {
 		let documentRoot = data["documentRoot"] as? String ?? "./webroot"
 		let allowResponseFilters = data["allowResponseFilters"] as? Bool ?? false
@@ -248,6 +251,8 @@ public extension HTTPHandler {
 		}
 	}
 	
+	/// Redirect any matching URI to the server indicated by "base".
+	/// The request.uri will be appended to the base.
 	public static func redirect(data: [String:Any]) throws -> RequestHandler {
 		guard let base = data["base"] as? String else {
 			fatalError("HTTPHandler.redirect(data: [String:Any]) requires a value for key \"base\".")
@@ -262,6 +267,7 @@ public extension HTTPHandler {
 }
 
 public struct HTTPFilter {
+	/// Any 404 responses will have the body replaced by the indictated file's contents.
 	public static func custom404(data: [String:Any]) throws -> HTTPResponseFilter {
 		guard let path = data["path"] as? String else {
 			fatalError("HTTPFilter.custom404(data: [String:Any]) requires a value for key \"path\".")
@@ -297,17 +303,17 @@ public struct HTTPFilter {
 }
 
 //testing
-public func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
-public struct UniqueStruct {
-	public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
-	public enum UniqueNestedEnum {
-		public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
-	}
-}
-public enum UniqueEnum {
-	public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
-}
-public class UniqueClass {
-	public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
-}
+//public func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
+//public struct UniqueStruct {
+//	public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
+//	public enum UniqueNestedEnum {
+//		public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
+//	}
+//}
+//public enum UniqueEnum {
+//	public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
+//}
+//public class UniqueClass {
+//	public static func uniqueName(data: [String:Any]) throws -> RequestHandler { throw PerfectError.apiError("hi") }
+//}
 
