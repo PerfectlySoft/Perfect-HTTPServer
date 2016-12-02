@@ -245,7 +245,7 @@ public extension HTTPServer {
 	
 	@discardableResult
 	public static func launch(wait: Bool = true, _ server: Server, _ servers: Server...) throws -> [LaunchContext] {
-		return try launch(wait: wait, servers)
+		return try launch(wait: wait, [server] + servers)
 	}
 	
 	@discardableResult
@@ -324,7 +324,7 @@ public extension HTTPServer {
 		return try launch(wait: wait, serversObjs)
 	}
 }
-
+/*
 func testingScratch() throws {
 	
 	// start a single server serving static files
@@ -380,7 +380,7 @@ func testingScratch() throws {
 		
 	}
 }
-
+*/
 
 
 
