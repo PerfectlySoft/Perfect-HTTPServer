@@ -859,16 +859,16 @@ class PerfectHTTPServerTests: XCTestCase {
 //					"name":"localhost",
 //					"port":8080,
 //					"routes":[
-//						["method":"get", "uri":"/**", "handler":"PerfectHTTPServer.HTTPHandler.staticFiles",
+//						["method":"get", "uri":"/**", "handler":PerfectHTTPServer.HTTPHandler.staticFiles,
 //						 "documentRoot":"./webroot"]
 //					],
 //					"filters":[
 //						["type":"request",
 //						 "priority":"high",
-//						 "name":"PerfectHTTPServer.HTTPFilter.customReqFilter"],
+//						 "name":PerfectHTTPServer.HTTPFilter.customReqFilter],
 //						["type":"response",
 //						 "priority":"high",
-//						 "name":"PerfectHTTPServer.HTTPFilter.custom404",
+//						 "name":PerfectHTTPServer.HTTPFilter.custom404,
 //						 "path":"./webroot/404.html"]
 //					],
 //					"tlsConfig":["certPath":"/Users/kjessup/new.cert.pem"]
@@ -877,7 +877,7 @@ class PerfectHTTPServerTests: XCTestCase {
 //					"name":"localhost redirect",
 //					"port":8181,
 //					"routes":[
-//						["method":"get", "uri":"/**", "handler":"PerfectHTTPServer.HTTPHandler.redirect",
+//						["method":"get", "uri":"/**", "handler":PerfectHTTPServer.HTTPHandler.redirect,
 //						 "base":"https://localhost:8080"]
 //					]
 //				]

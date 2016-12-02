@@ -11,8 +11,9 @@ import PerfectNet
 import Foundation
 
 // HERE BE DRAGONS
-private typealias ReturnsRequestHandler = () throws -> RequestHandler
 private typealias ReturnsRequestHandlerGivenData = ([String:Any]) throws -> RequestHandler
+private typealias ReturnsResponseFilterGivenData = ([String:Any]) throws -> HTTPResponseFilter
+private typealias ReturnsRequestFilterGivenData = ([String:Any]) throws -> HTTPRequestFilter
 
 private func templateWithData(data: [String:Any]) throws -> RequestHandler {
 	fatalError("nope")
@@ -69,11 +70,17 @@ private extension Route {
 		guard let uri = data["uri"] as? String else {
 			throw PerfectError.apiError("Route data did not contain a uri")
 		}
-		guard let handlerName = data["handler"] as? String else {
-			throw PerfectError.apiError("Route data did not contain a handler name")
-		}
-		guard let handler = try Route.lookupHandler(named: handlerName, data: data) else {
-			throw PerfectError.apiError("Route could not find handler \(handlerName). Ensure it is spelled correctly and fully qualified with its module name.")
+		let handler: RequestHandler
+		switch data["handler"] {
+		case let handlerName as String:
+			guard let tryHandler = try Route.lookupHandler(named: handlerName, data: data) else {
+				throw PerfectError.apiError("Route could not find handler \(handlerName). Ensure it is spelled correctly and fully qualified with its module name.")
+			}
+			handler = tryHandler
+		case let handlerFunc as ReturnsRequestHandlerGivenData:
+			handler = try handlerFunc(data)
+		default:
+			throw PerfectError.apiError("No valid handler was provided \"handler\"=\(data["handler"])")
 		}
 		if let methodStr = data["method"] as? String {
 			self.init(method: HTTPMethod.from(string: methodStr.uppercased()), uri: uri, handler: handler)
@@ -118,13 +125,13 @@ extension Routes {
 extension OpenSSLVerifyMode {
 	init?(string: String) {
 		switch string {
-		case "sslVerifyNone": self = .sslVerifyNone
-		case "sslVerifyPeer": self = .sslVerifyPeer
-		case "sslVerifyFailIfNoPeerCert": self = .sslVerifyFailIfNoPeerCert
-		case "sslVerifyClientOnce": self = .sslVerifyClientOnce
-		case "sslVerifyPeerWithFailIfNoPeerCert": self = .sslVerifyPeerWithFailIfNoPeerCert
-		case "sslVerifyPeerClientOnce": self = .sslVerifyPeerClientOnce
-		case "sslVerifyPeerWithFailIfNoPeerCertClientOnce": self = .sslVerifyPeerWithFailIfNoPeerCertClientOnce
+		case "none": self = .sslVerifyNone
+		case "peer": self = .sslVerifyPeer
+		case "failIfNoPeerCert": self = .sslVerifyFailIfNoPeerCert
+		case "clientOnce": self = .sslVerifyClientOnce
+		case "peerWithFailIfNoPeerCert": self = .sslVerifyPeerWithFailIfNoPeerCert
+		case "peerClientOnce": self = .sslVerifyPeerClientOnce
+		case "peerWithFailIfNoPeerCertClientOnce": self = .sslVerifyPeerWithFailIfNoPeerCertClientOnce
 		default:
 			return nil
 		}
@@ -146,7 +153,7 @@ extension TLSConfiguration {
 
 private func findRequestFilter(_ named: String, data: [String:Any]) throws -> HTTPRequestFilter? {
 	if let sym = findFunc(named, suffixes: ["P11PerfectHTTP17HTTPRequestFilter_"]) {
-		let fn = UnsafeMutablePointer<([String:Any]) throws -> HTTPRequestFilter>.allocate(capacity: 1)
+		let fn = UnsafeMutablePointer<ReturnsRequestFilterGivenData>.allocate(capacity: 1)
 		defer {
 			fn.deinitialize(count: 1)
 			fn.deallocate(capacity: 1)
@@ -162,7 +169,7 @@ private func findRequestFilter(_ named: String, data: [String:Any]) throws -> HT
 
 private func findResponseFilter(_ named: String, data: [String:Any]) throws -> HTTPResponseFilter? {
 	if let sym = findFunc(named, suffixes: ["P11PerfectHTTP18HTTPResponseFilter_"]) {
-		let fn = UnsafeMutablePointer<([String:Any]) throws -> HTTPResponseFilter>.allocate(capacity: 1)
+		let fn = UnsafeMutablePointer<ReturnsResponseFilterGivenData>.allocate(capacity: 1)
 		defer {
 			fn.deinitialize(count: 1)
 			fn.deallocate(capacity: 1)
@@ -176,6 +183,8 @@ private func findResponseFilter(_ named: String, data: [String:Any]) throws -> H
 	return nil
 }
 
+// DRAGONS GONE -------------------------------------------
+
 private let kv: [String:HTTPFilterPriority] = ["low":.low, "medium":.medium, "high":.high]
 
 func filtersFrom(data: [[String:Any]]) throws -> [(HTTPRequestFilter, HTTPFilterPriority)] {
@@ -185,11 +194,17 @@ func filtersFrom(data: [[String:Any]]) throws -> [(HTTPRequestFilter, HTTPFilter
 			continue
 		}
 		let prio = kv[e["priority"] as? String ?? "high"] ?? .high
-		guard let name = e["name"] as? String else {
-			throw PerfectError.apiError("A filter needs a name")
-		}
-		guard let filterObj = try findRequestFilter(name, data: e) else {
-			throw PerfectError.apiError("The filter \(name) was not found")
+		let filterObj: HTTPRequestFilter
+		switch e["name"] {
+		case let name as String:
+			guard let tryFilterObj = try findRequestFilter(name, data: e) else {
+				throw PerfectError.apiError("The filter \(name) was not found")
+			}
+			filterObj = tryFilterObj
+		case let fnc as ReturnsRequestFilterGivenData:
+			filterObj = try fnc(e)
+		default:
+			throw PerfectError.apiError("The indicated filter could not be found \(e["name"]).")
 		}
 		ret.append((filterObj, prio))
 	}
@@ -203,11 +218,17 @@ func filtersFrom(data: [[String:Any]]) throws -> [(HTTPResponseFilter, HTTPFilte
 			continue
 		}
 		let prio = kv[e["priority"] as? String ?? "high"] ?? .high
-		guard let name = e["name"] as? String else {
-			throw PerfectError.apiError("A filter needs a name")
-		}
-		guard let filterObj = try findResponseFilter(name, data: e) else {
-			throw PerfectError.apiError("The filter \(name) was not found")
+		let filterObj: HTTPResponseFilter
+		switch e["name"] {
+		case let name as String:
+			guard let tryFilterObj = try findResponseFilter(name, data: e) else {
+				throw PerfectError.apiError("The filter \(name) was not found")
+			}
+			filterObj = tryFilterObj
+		case let fnc as ReturnsResponseFilterGivenData:
+			filterObj = try fnc(e)
+		default:
+			throw PerfectError.apiError("The indicated filter could not be found \(e["name"]).")
 		}
 		ret.append((filterObj, prio))
 	}
@@ -241,7 +262,7 @@ public extension HTTPHandler {
 }
 
 public struct HTTPFilter {
-	public func custom404(data: [String:Any]) throws -> HTTPResponseFilter {
+	public static func custom404(data: [String:Any]) throws -> HTTPResponseFilter {
 		guard let path = data["path"] as? String else {
 			fatalError("HTTPFilter.custom404(data: [String:Any]) requires a value for key \"path\".")
 		}
@@ -265,7 +286,7 @@ public struct HTTPFilter {
 		return Filter404(path: path)
 	}
 	
-	public func customReqFilter(data: [String:Any]) throws -> HTTPRequestFilter {
+	public static func customReqFilter(data: [String:Any]) throws -> HTTPRequestFilter {
 		struct ReqFilter: HTTPRequestFilter {
 			func filter(request: HTTPRequest, response: HTTPResponse, callback: (HTTPRequestFilterResult) -> ()) {
 				callback(.continue(request, response))
