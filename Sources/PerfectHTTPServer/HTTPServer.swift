@@ -152,7 +152,7 @@ public class HTTPServer {
 	public func start() throws {
 		if let (cert, key) = ssl {
 			let socket = NetTCPSSL()
-			socket.initSocket()
+			try socket.bind(port: serverPort, address: serverAddress)
 			socket.cipherList = self.cipherList
 			
 			if let verifyMode = certVerifyMode,
@@ -181,7 +181,7 @@ public class HTTPServer {
 			Log.info(message: "Starting HTTPS server \(serverName) on \(serverAddress):\(serverPort)")
 		} else {
 			self.net = NetTCP()
-			self.net?.initSocket()
+			try self.net?.bind(port: serverPort, address: serverAddress)
 			Log.info(message: "Starting HTTP server \(serverName) on \(serverAddress):\(serverPort)")
 		}
 		try self.startInner()
@@ -197,7 +197,6 @@ public class HTTPServer {
 		guard let sock = self.net else {
 			Log.terminal(message: "Server could not be started. Socket was not initialized.")
 		}
-		try sock.bind(port: serverPort, address: serverAddress)
 		if let runAs = self.runAsUser {
 			try PerfectServer.switchTo(userName: runAs)
 		}

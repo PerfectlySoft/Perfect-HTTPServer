@@ -238,6 +238,7 @@ public extension HTTPServer {
 		let ctx = servers.map { LaunchContext($0) }
 		try ctx.forEach { try $0.launchServer() }
 		if wait {
+			try ctx.forEach { try $0.wait(seconds: 1.0) }
 			try ctx.forEach { try $0.wait() }
 		}
 		return ctx
@@ -255,6 +256,7 @@ public extension HTTPServer {
 		let lc = LaunchContext(.server(name: name, port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters))
 		try lc.launchServer()
 		if wait {
+			try lc.wait(seconds: 1.0)
 			try lc.wait()
 		}
 		return lc
@@ -274,6 +276,7 @@ public extension HTTPServer {
 		let lc = LaunchContext(.server(name: name, port: port, documentRoot: root, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters))
 		try lc.launchServer()
 		if wait {
+			try lc.wait(seconds: 1.0)
 			try lc.wait()
 		}
 		return lc
