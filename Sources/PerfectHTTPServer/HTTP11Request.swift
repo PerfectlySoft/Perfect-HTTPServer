@@ -18,6 +18,7 @@
 //
 
 import PerfectNet
+import PerfectThread
 import PerfectLib
 import PerfectHTTP
 import CHTTPParser
@@ -31,7 +32,7 @@ private let characterSP: Character = " "
 private let characterHT: Character = "\t"
 private let characterColon: Character = ":"
 
-private let httpReadSize = 1024 * 4
+private let httpReadSize = 1024 * 8
 private let httpReadTimeout = 5.0
 
 let httpLF: UInt8 = 10
@@ -342,7 +343,13 @@ class HTTP11Request: HTTPRequest {
 			b in
 			if let b = b, b.count > 0 {
 				if self.didReadSomeBytes(b, callback: callback) {
-					self.readRequest(callback: callback)
+					if b.count == httpReadSize {
+						Threading.dispatch {
+							self.readRequest(callback: callback)
+						}
+					} else {
+						self.readRequest(callback: callback)
+					}
 				}
 			} else {
 				self.connection.readBytesFully(count: 1, timeoutSeconds: httpReadTimeout) {
