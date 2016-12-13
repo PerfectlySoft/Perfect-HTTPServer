@@ -47,7 +47,14 @@ public struct TLSConfiguration {
 	}
 }
 
+private var processRunAs: String?
+
 public extension HTTPServer {
+	
+	public static func runAs(_ user: String) -> HTTPServer.Type {
+		processRunAs = user
+		return self
+	}
 	
 	public struct Server {
 		public let name: String
@@ -57,7 +64,6 @@ public extension HTTPServer {
 		public let requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)]
 		public let responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)]
 		public let tlsConfig: TLSConfiguration?
-		public let runAs: String?
 		
 		var server: HTTPServer {
 			let http = HTTPServer()
@@ -67,7 +73,6 @@ public extension HTTPServer {
 			http.addRoutes(routes)
 			http.setRequestFilters(requestFilters)
 			http.setResponseFilters(responseFilters)
-			http.runAsUser = self.runAs
 			if let tls = tlsConfig {
 				http.ssl = (tls.certPath, tls.keyPath ?? tls.certPath)
 				http.caCert = tls.caCertPath
@@ -77,7 +82,7 @@ public extension HTTPServer {
 			return http
 		}
 		
-		public init(name: String, address: String, port: Int, routes: Routes, runAs: String? = nil,
+		public init(name: String, address: String, port: Int, routes: Routes,
 		            requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		            responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) {
 			self.name = name
@@ -87,10 +92,9 @@ public extension HTTPServer {
 			self.requestFilters = requestFilters
 			self.responseFilters = responseFilters
 			self.tlsConfig = nil
-			self.runAs = runAs
 		}
 		
-		public init(tlsConfig: TLSConfiguration, name: String, address: String, port: Int, routes: Routes, runAs: String? = nil,
+		public init(tlsConfig: TLSConfiguration, name: String, address: String, port: Int, routes: Routes,
 		            requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		            responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) {
 			self.name = name
@@ -100,34 +104,34 @@ public extension HTTPServer {
 			self.requestFilters = requestFilters
 			self.responseFilters = responseFilters
 			self.tlsConfig = tlsConfig
-			self.runAs = runAs
+
 		}
 		
-		public init(name: String, port: Int, routes: Routes, runAs: String? = nil,
+		public init(name: String, port: Int, routes: Routes,
 		            requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		            responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) {
-			self.init(name: name, address: "0.0.0.0", port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+			self.init(name: name, address: "::", port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
-		public init(tlsConfig: TLSConfiguration, name: String, port: Int, routes: Routes, runAs: String? = nil,
+		public init(tlsConfig: TLSConfiguration, name: String, port: Int, routes: Routes,
 		            requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		            responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) {
-			self.init(tlsConfig: tlsConfig, name: name, address: "0.0.0.0", port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
+			self.init(tlsConfig: tlsConfig, name: name, address: "::", port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
-		public static func server(name: String, port: Int, routes: Routes, runAs: String? = nil,
+		public static func server(name: String, port: Int, routes: Routes,
 		                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
-			return HTTPServer.Server(name: name, port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+			return HTTPServer.Server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
-		public static func server(name: String, port: Int, routes: [Route], runAs: String? = nil,
+		public static func server(name: String, port: Int, routes: [Route],
 		                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
-			return HTTPServer.Server(name: name, port: port, routes: Routes(routes), runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+			return HTTPServer.Server(name: name, port: port, routes: Routes(routes), requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
-		public static func server(name: String, port: Int, documentRoot root: String, runAs: String? = nil,
+		public static func server(name: String, port: Int, documentRoot root: String,
 		                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
 			let routes = Routes([.init(method: .get, uri: "/**", handler: {
@@ -135,19 +139,19 @@ public extension HTTPServer {
 				StaticFileHandler(documentRoot: root, allowResponseFilters: 0 < (requestFilters.count + responseFilters.count))
 					.handleRequest(request: req, response: resp)
 				})])
-			return HTTPServer.Server(name: name, port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+			return HTTPServer.Server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
-		public static func secureServer(_ tlsConfig: TLSConfiguration, name: String, port: Int, routes: [Route], runAs: String? = nil,
+		public static func secureServer(_ tlsConfig: TLSConfiguration, name: String, port: Int, routes: [Route],
 		                                requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		                                responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
-			return HTTPServer.Server(tlsConfig: tlsConfig, name: name, port: port, routes: Routes(routes), runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+			return HTTPServer.Server(tlsConfig: tlsConfig, name: name, port: port, routes: Routes(routes), requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
-		public static func secureServer(_ tlsConfig: TLSConfiguration, name: String, port: Int, routes: Routes, runAs: String? = nil,
+		public static func secureServer(_ tlsConfig: TLSConfiguration, name: String, port: Int, routes: Routes,
 		                                requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		                                responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
-			return HTTPServer.Server(tlsConfig: tlsConfig, name: name, port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
+			return HTTPServer.Server(tlsConfig: tlsConfig, name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 	}
 }
@@ -207,9 +211,27 @@ public extension HTTPServer {
 			return terminated
 		}
 		
+		func bindServer() throws {
+			self.httpServer = server.server
+			guard let httpServer = self.httpServer else {
+				throw LaunchFailure(message: "Could not get HTTPServer", configuration: server)
+			}
+			do {
+				try httpServer.bind()
+			} catch PerfectNetError.networkError(let code, let msg) {
+				switch code {
+				case 48:
+					throw LaunchFailure(message: "Server \(id) - Another server was already listening on the requested port \(self.server.port)", configuration: self.server)
+				default:
+					throw LaunchFailure(message: "Server \(id) - \(code):\(msg)", configuration: self.server)
+				}
+			} catch {
+				throw LaunchFailure(message: "Server \(id) - \(error)", configuration: self.server)
+			}
+		}
+		
 		@discardableResult
 		func launchServer() throws -> LaunchContext {
-			self.httpServer = server.server
 			guard let httpServer = self.httpServer else {
 				throw LaunchFailure(message: "Could not get HTTPServer", configuration: server)
 			}
@@ -233,9 +255,25 @@ public extension HTTPServer {
 }
 
 public extension HTTPServer {
+	
+	@discardableResult
+	public static func launch(wait: Bool = true, _ server: Server, _ servers: Server...) throws -> [LaunchContext] {
+		return try launch(wait: wait, [server] + servers)
+	}
+	
+	@discardableResult
+	public static func launch(wait: Bool = true, name: String, port: Int, routes: [Route],
+	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
+	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
+		return try launch(wait: wait, name: name, port: port, routes: Routes(routes), requestFilters: requestFilters, responseFilters: responseFilters)
+	}
+	
+	// launch with array
 	@discardableResult
 	public static func launch(wait: Bool = true, _ servers: [Server]) throws -> [LaunchContext] {
 		let ctx = servers.map { LaunchContext($0) }
+		try ctx.forEach { try $0.bindServer() }
+		try switchUser()
 		try ctx.forEach { try $0.launchServer() }
 		if wait {
 			try ctx.forEach { try $0.wait(seconds: 1.0) }
@@ -244,16 +282,14 @@ public extension HTTPServer {
 		return ctx
 	}
 	
+	// launch one
 	@discardableResult
-	public static func launch(wait: Bool = true, _ server: Server, _ servers: Server...) throws -> [LaunchContext] {
-		return try launch(wait: wait, [server] + servers)
-	}
-	
-	@discardableResult
-	public static func launch(wait: Bool = true, name: String, port: Int, routes: Routes, runAs: String? = nil,
+	public static func launch(wait: Bool = true, name: String, port: Int, routes: Routes,
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
-		let lc = LaunchContext(.server(name: name, port: port, routes: routes, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters))
+		let lc = LaunchContext(.server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters))
+		try lc.bindServer()
+		try switchUser()
 		try lc.launchServer()
 		if wait {
 			try lc.wait(seconds: 1.0)
@@ -262,24 +298,27 @@ public extension HTTPServer {
 		return lc
 	}
 	
+	// launch one with document root
 	@discardableResult
-	public static func launch(wait: Bool = true, name: String, port: Int, routes: [Route], runAs: String? = nil,
+	public static func launch(wait: Bool = true, name: String, port: Int, documentRoot root: String,
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
-		return try launch(wait: wait, name: name, port: port, routes: Routes(routes), runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters)
-	}
-	
-	@discardableResult
-	public static func launch(wait: Bool = true, name: String, port: Int, documentRoot root: String, runAs: String? = nil,
-	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
-	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
-		let lc = LaunchContext(.server(name: name, port: port, documentRoot: root, runAs: runAs, requestFilters: requestFilters, responseFilters: responseFilters))
+		let lc = LaunchContext(.server(name: name, port: port, documentRoot: root, requestFilters: requestFilters, responseFilters: responseFilters))
+		try lc.bindServer()
+		try switchUser()
 		try lc.launchServer()
 		if wait {
 			try lc.wait(seconds: 1.0)
 			try lc.wait()
 		}
 		return lc
+	}
+	
+	private static func switchUser() throws {
+		guard let runAs = processRunAs else {
+			return
+		}
+		try PerfectServer.switchTo(userName: runAs)
 	}
 }
 
@@ -301,7 +340,6 @@ private extension HTTPServer.Server {
 		self.responseFilters = try filtersFrom(data: filters)
 
 		self.tlsConfig = TLSConfiguration(data: data["tlsConfig"] as? [String:Any] ?? [:])
-		self.runAs = data["runAs"] as? String
 	}
 }
 
@@ -320,6 +358,7 @@ public extension HTTPServer {
 	}
 	@discardableResult
 	public static func launch(wait: Bool = true, configurationData data: [String:Any]) throws -> [LaunchContext] {
+		processRunAs = data["runAs"] as? String
 		guard let servers = data["servers"] as? [[String:Any]] else {
 			return []
 		}
@@ -327,11 +366,13 @@ public extension HTTPServer {
 		return try launch(wait: wait, serversObjs)
 	}
 }
-/*
+
 func testingScratch() throws {
 	
 	// start a single server serving static files
-	try HTTPServer.launch(name: "localhost", port: 8080, documentRoot: "/path/to/webroot")
+	try HTTPServer
+		.runAs("kjessup")
+		.launch(name: "localhost", port: 8080, documentRoot: "/path/to/webroot")
 	
 	// start a single server serving static files
 	// optionally grab the LaunchContext and kill the server then wait for it to completely shut down
@@ -383,7 +424,7 @@ func testingScratch() throws {
 		
 	}
 }
-*/
+
 
 
 

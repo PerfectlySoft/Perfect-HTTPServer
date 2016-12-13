@@ -148,8 +148,8 @@ public class HTTPServer {
 		try self.start()
 	}
 	
-	/// Start the server. Does not return until the server terminates.
-	public func start() throws {
+	/// Bind the server to the designated address/port
+	public func bind() throws {
 		if let (cert, key) = ssl {
 			let socket = NetTCPSSL()
 			try socket.bind(port: serverPort, address: serverAddress)
@@ -178,12 +178,23 @@ public class HTTPServer {
 				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
 			}
 			self.net = socket
-			Log.info(message: "Starting HTTPS server \(serverName) on \(serverAddress):\(serverPort)")
 		} else {
-			self.net = NetTCP()
-			try self.net?.bind(port: serverPort, address: serverAddress)
-			Log.info(message: "Starting HTTP server \(serverName) on \(serverAddress):\(serverPort)")
+			let net = NetTCP()
+			try net.bind(port: serverPort, address: serverAddress)
+			self.net = net
 		}
+	}
+	
+	/// Start the server. Does not return until the server terminates.
+	public func start() throws {
+		if nil == self.net {
+			try bind()
+		}
+		guard let net = self.net else {
+			throw PerfectError.networkError(-1, "The socket was not bound.")
+		}
+		let witess = (net is NetTCPSSL) ? "HTTPS" : "HTTP"
+		Log.info(message: "Starting \(witess) server \(self.serverName) on \(self.serverAddress):\(self.serverPort)")
 		try self.startInner()
 	}
 	
