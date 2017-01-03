@@ -20,6 +20,7 @@ import CZlib
 
 class ZlibStream {
 	var stream = z_stream()
+	var closed = false
 	
 	init?() {
 		stream.zalloc = nil
@@ -29,6 +30,12 @@ class ZlibStream {
 		let err = deflateInit_(&stream, Z_DEFAULT_COMPRESSION, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
 		guard Z_OK == err else {
 			return nil
+		}
+	}
+	
+	deinit {
+		if !closed {
+			close()
 		}
 	}
 	
@@ -66,7 +73,10 @@ class ZlibStream {
 	}
 	
 	func close() {
-		deflateEnd(&stream)
+		if !closed {
+			closed = true
+			deflateEnd(&stream)
+		}
 	}
 }
 
@@ -87,25 +97,33 @@ public extension HTTPFilter {
 			
 			func filterHeaders(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
 				let req = response.request
-				if !response.isStreaming,
-					let acceptEncoding = req.header(.acceptEncoding),
+				if let acceptEncoding = req.header(.acceptEncoding),
 					let contentType = contentType(response: response),
 					clientWantsCompression(acceptEncoding: acceptEncoding),
 					shouldCompress(mimeType: contentType) {
+					
 					let skipCheck = response.request.scratchPad["no-compression"] as? Bool ?? false
 					if !skipCheck, let stream = ZlibStream() {
 						response.setHeader(.contentEncoding, value: "deflate")
-						let old = response.bodyBytes
-						let new = stream.compress(old)
-						response.bodyBytes = new
-						stream.close()
-						response.setHeader(.contentLength, value: "\(new.count)")
+						if response.isStreaming {
+							response.request.scratchPad["zlib-stream"] = stream
+						} else {
+							let old = response.bodyBytes
+							let new = stream.compress(old)
+							response.bodyBytes = new
+							stream.close()
+							response.setHeader(.contentLength, value: "\(new.count)")
+						}
 					}
 				}
 				return callback(.continue)
 			}
 			
 			func filterBody(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
+				guard response.isStreaming, let stream = response.request.scratchPad["zlib-stream"] as? ZlibStream else {
+					return callback(.continue)
+				}
+				response.bodyBytes = stream.compress(response.bodyBytes)
 				return callback(.continue)
 			}
 			

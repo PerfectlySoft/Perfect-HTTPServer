@@ -921,7 +921,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						}
 						
 						let str = UTF8Encoding.encode(bytes: bytes)
-						let splitted = str.characters.split(separator: "\r\n").map(String.init)
+//						let splitted = str.characters.split(separator: "\r\n").map(String.init)
 						
 //						XCTAssert(splitted.last == msg)
 						
@@ -939,11 +939,11 @@ class PerfectHTTPServerTests: XCTestCase {
 			configs.forEach { $0.terminate() }
 		}
 	}
-
-//	func testScratch() {
-//		try! testingScratch()
-//	}
-	
+/*
+	func testScratch() {
+		try! testingScratch()
+	}
+*/
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
         return [
 			("testHPACKEncode", testHPACKEncode),
