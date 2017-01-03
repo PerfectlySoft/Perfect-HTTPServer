@@ -852,46 +852,98 @@ class PerfectHTTPServerTests: XCTestCase {
 		})
 	}
 	
-//	func testServerConf1() {
-//		let confData = [
-//			"servers": [
-//				[
-//					"name":"localhost",
-//					"port":8080,
-//					"routes":[
-//						["method":"get", "uri":"/**", "handler":PerfectHTTPServer.HTTPHandler.staticFiles,
-//						 "documentRoot":"./webroot"]
-//					],
-//					"filters":[
-//						["type":"request",
-//						 "priority":"high",
-//						 "name":PerfectHTTPServer.HTTPFilter.customReqFilter],
-//						["type":"response",
-//						 "priority":"high",
-//						 "name":PerfectHTTPServer.HTTPFilter.custom404,
-//						 "path":"./webroot/404.html"]
-//					],
-//					"tlsConfig":["certPath":"/Users/kjessup/new.cert.pem"]
-//				],
-//				[
-//					"name":"localhost redirect",
-//					"port":8181,
-//					"routes":[
-//						["method":"get", "uri":"/**", "handler":PerfectHTTPServer.HTTPHandler.redirect,
-//						 "base":"https://localhost:8080"]
-//					]
-//				]
-//			]
-//		]
-//		
-//		do {
-//			try HTTPServer.launch(configurationData: confData)
-//		} catch {
-//			return XCTAssert(false, "Error: \(error)")
-//		}
-//		XCTAssert(true)
-//	}
+	func testServerConf1() {
+		
+		let port = 8080
+		
+		func handler(data: [String:Any]) throws -> RequestHandler {
+			return {
+				req, resp in
+				for _ in 0..<20 {
+					resp.appendBody(string: "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")
+				}
+				resp.completed()
+			}
+		}
+		
+		let confData = [
+			"servers": [
+				[
+					"name":"localhost",
+					"port":port,
+					"routes":[
+						["method":"get", "uri":"/test.html", "handler":handler],
+						["method":"get", "uri":"/test.png", "handler":handler]
+					],
+					"filters":[
+						[
+							"type":"response",
+							"priority":"high",
+							"name":PerfectHTTPServer.HTTPFilter.contentCompression,
+						]
+					]
+				]
+			]
+		]
+		let configs: [HTTPServer.LaunchContext]
+		do {
+			configs = try HTTPServer.launch(wait: false, configurationData: confData)
+		} catch {
+			return XCTAssert(false, "Error: \(error)")
+		}
+		
+		let clientExpectation = self.expectation(description: "client")
+		
+		do {
+			try NetTCP().connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTAssert(false, "Could not connect to server")
+					return clientExpectation.fulfill()
+				}
+				let reqStr = "GET /test.html HTTP/1.0\r\nHost: localhost:\(port)\r\nAccept-Encoding: gzip, deflate\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
+					
+					guard count == reqStr.utf8.count else {
+						XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+						return clientExpectation.fulfill()
+					}
+					
+					Threading.sleep(seconds: 2.0)
+					net.readSomeBytes(count: 1024) {
+						bytes in
+						
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTAssert(false, "Could not read bytes from server")
+							return clientExpectation.fulfill()
+						}
+						
+						let str = UTF8Encoding.encode(bytes: bytes)
+						let splitted = str.characters.split(separator: "\r\n").map(String.init)
+						
+//						XCTAssert(splitted.last == msg)
+						
+						clientExpectation.fulfill()
+					}
+				}
+			}
+		} catch {
+			XCTAssert(false, "Error thrown: \(error)")
+			clientExpectation.fulfill()
+		}
+		
+		waitForExpectations(timeout: 10000) {
+			_ in
+			configs.forEach { $0.terminate() }
+		}
+	}
 
+//	func testScratch() {
+//		try! testingScratch()
+//	}
+	
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
         return [
 			("testHPACKEncode", testHPACKEncode),
@@ -908,7 +960,8 @@ class PerfectHTTPServerTests: XCTestCase {
 			("testRequestFilters", testRequestFilters),
 			("testResponseFilters", testResponseFilters),
 			("testStreamingResponseFilters", testStreamingResponseFilters),
-			("testSlowClient", testSlowClient)
+			("testSlowClient", testSlowClient),
+			("testServerConf1", testServerConf1)
         ]
     }
 }

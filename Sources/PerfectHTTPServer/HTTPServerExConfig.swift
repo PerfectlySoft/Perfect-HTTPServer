@@ -9,6 +9,7 @@ import PerfectHTTP
 import PerfectLib
 import PerfectNet
 import Foundation
+import CZlib
 
 // HERE BE DRAGONS
 private typealias ReturnsRequestHandlerGivenData = ([String:Any]) throws -> RequestHandler
@@ -61,7 +62,7 @@ private func findFunc(_ named: String, suffixes: [String]) -> UnsafeMutableRawPo
 			}
 		}
 	}
-	print(rcheck)
+//	print(rcheck)
 	return nil
 }
 

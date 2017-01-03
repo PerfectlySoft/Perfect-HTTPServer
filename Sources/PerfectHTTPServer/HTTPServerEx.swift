@@ -366,69 +366,44 @@ public extension HTTPServer {
 		return try launch(wait: wait, serversObjs)
 	}
 }
-
+/*
 func testingScratch() throws {
+	let port = 8080
 	
-	// start a single server serving static files
-	try HTTPServer
-		.runAs("kjessup")
-		.launch(name: "localhost", port: 8080, documentRoot: "/path/to/webroot")
-	
-	// start a single server serving static files
-	// optionally grab the LaunchContext and kill the server then wait for it to completely shut down
-	let ctx = try HTTPServer.launch(wait: false, name: "localhost", port: 8080, documentRoot: "/path/to/webroot")
-	try ctx.terminate().wait()
-	
-	do {
-		// start two servers. have one serve static files and the other handle API requests
-		let apiRoutes = [Route(method: .get, uri: "/foo/bar", handler: {
-							req, resp in
-							//do stuff
-						})
-		]
-		try HTTPServer.launch(
-			.server(name: "localhost", port: 8080, documentRoot:  "/path/to/webroot"),
-			.server(name: "localhost", port: 8181, routes: apiRoutes))
-	
-	}
-	
-	do {
-		try HTTPServer.launch(.server(name: "localhost", port: 8080, documentRoot:  "/path/to/webroot"))
-		
-	}
-	
-	do {
-		// start a single server which handles API and static files
-		try HTTPServer.launch(name: "localhost", port: 8080, routes: [
-			Route(method: .get, uri: "/foo/bar", handler: {
-				req, resp in
-				//do stuff
-			}),
-			Route(method: .get, uri: "/foo/bar", handler:
-				HTTPHandler.staticFiles(data: ["documentRoot":"/path/to/webroot"])
-			)])
-	}
-	
-	do {
-		let apiRoutes = [Route(method: .get, uri: "/foo/bar", handler: {
+	func handler(data: [String:Any]) throws -> RequestHandler {
+		return {
 			req, resp in
-			//do stuff
-		})
-		]
-		// start a secure server
-		try HTTPServer.launch(.secureServer(TLSConfiguration(certPath: "/path/to/cert"), name: "localhost", port: 8080, routes: apiRoutes))
+			for _ in 0..<20 {
+				resp.appendBody(string: "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")
+			}
+			resp.completed()
+		}
 	}
 	
+	let confData = [
+		"servers": [
+			[
+				"name":"localhost",
+				"port":port,
+				"routes":[
+					["method":"get", "uri":"/test.html", "handler":handler],
+					["method":"get", "uri":"/test.png", "handler":handler]
+				],
+				"filters":[
+					[
+						"type":"response",
+						"priority":"high",
+						"name":PerfectHTTPServer.HTTPFilter.contentCompression,
+						]
+				]
+			]
+		]
+	]
 	do {
-		// start a secure server and a non-secure redirect server
+		 try HTTPServer.launch(configurationData: confData)
+	} catch {
 		
 	}
 }
-
-
-
-
-
-
-
+*/
 
