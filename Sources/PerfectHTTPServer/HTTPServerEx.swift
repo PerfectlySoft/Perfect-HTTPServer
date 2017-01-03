@@ -387,7 +387,7 @@ func testingScratch() throws {
 				"port":port,
 				"routes":[
 					["method":"get", "uri":"/test.html", "handler":handler],
-					["method":"get", "uri":"/**", "handler":HTTPHandler.staticFiles,
+					["method":"get", "uri":"/    *     *", "handler":HTTPHandler.staticFiles,
 					 "documentRoot":"/Users/kjessup/development/PerfectNeu/PerfectTemplate/webroot",
 					 "allowResponseFilters":true]
 				],
@@ -408,4 +408,3 @@ func testingScratch() throws {
 	}
 }
 */
-
