@@ -97,6 +97,12 @@ public extension HTTPFilter {
 			
 			func filterHeaders(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
 				let req = response.request
+				if case .head = req.method {
+					return callback(.continue)
+				}
+				if case .notModified = response.status {
+					return callback(.continue)
+				}
 				if let acceptEncoding = req.header(.acceptEncoding),
 					let contentType = contentType(response: response),
 					clientWantsCompression(acceptEncoding: acceptEncoding),
@@ -123,7 +129,9 @@ public extension HTTPFilter {
 				guard response.isStreaming, let stream = response.request.scratchPad["zlib-stream"] as? ZlibStream else {
 					return callback(.continue)
 				}
-				response.bodyBytes = stream.compress(response.bodyBytes)
+				if response.bodyBytes.count > 0 {
+					response.bodyBytes = stream.compress(response.bodyBytes)
+				}
 				return callback(.continue)
 			}
 			
