@@ -854,7 +854,7 @@ class PerfectHTTPServerTests: XCTestCase {
 	
 	func testServerConf1() {
 		
-		let port = 8080
+		let port = 8282
 		
 		func handler(data: [String:Any]) throws -> RequestHandler {
 			return {
@@ -920,7 +920,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							return clientExpectation.fulfill()
 						}
 						
-						let str = UTF8Encoding.encode(bytes: bytes)
+//						let str = UTF8Encoding.encode(bytes: bytes)
 //						let splitted = str.characters.split(separator: "\r\n").map(String.init)
 						
 //						XCTAssert(splitted.last == msg)
