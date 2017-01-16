@@ -67,7 +67,8 @@ open class HTTPServer {
 	public var ssl: (sslCert: String, sslKey: String)?
 	public var caCert: String?
 	public var certVerifyMode: OpenSSLVerifyMode?
-	
+	public var tlsMethod: TLSMethod = .tlsV1_2
+  
 	public var cipherList = [
 		"ECDHE-ECDSA-AES256-GCM-SHA384",
 		"ECDHE-ECDSA-AES128-GCM-SHA256",
@@ -149,10 +150,10 @@ open class HTTPServer {
 	}
 	
 	/// Bind the server to the designated address/port
-  open func bind(tlsMethod: TLSMethod? = .tlsV1_2) throws {
+  open func bind() throws {
 		if let (cert, key) = ssl {
       let socket = NetTCPSSL()
-      socket.tlsMethod = tlsMethod ?? .tlsV1_2
+      socket.tlsMethod = self.tlsMethod
 			try socket.bind(port: serverPort, address: serverAddress)
 			socket.cipherList = self.cipherList
 			
