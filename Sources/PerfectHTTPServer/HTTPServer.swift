@@ -30,9 +30,9 @@ import PerfectHTTP
 #endif
 
 /// Stand-alone HTTP server.
-public class HTTPServer {
+open class HTTPServer {
 	
-	private var net: NetTCP?
+	public var net: NetTCP?
 	
 	/// The directory in which web documents are sought.
 	/// Setting the document root will add a default URL route which permits
@@ -149,9 +149,9 @@ public class HTTPServer {
 	}
 	
 	/// Bind the server to the designated address/port
-	public func bind() throws {
+  open func bind(tlsMethod: TLSMethod? = .tlsV1_2) throws {
 		if let (cert, key) = ssl {
-			let socket = NetTCPSSL()
+      let socket = NetTCPSSL(tlsMethod: tlsMethod ?? .tlsV1_2)
 			try socket.bind(port: serverPort, address: serverAddress)
 			socket.cipherList = self.cipherList
 			
