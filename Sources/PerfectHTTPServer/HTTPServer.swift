@@ -217,7 +217,7 @@ public class HTTPServer {
 		_ = setsockopt(sock.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
 		
 		defer { sock.close() }
-		self.serverAddress = sock.sockName().0
+		self.serverAddress = sock.localAddress?.host ?? ""
 		sock.forEachAccept {
 			[weak self] net in
 			guard let net = net else {

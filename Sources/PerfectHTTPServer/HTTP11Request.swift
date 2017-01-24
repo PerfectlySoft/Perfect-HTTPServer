@@ -52,7 +52,12 @@ class HTTP11Request: HTTPRequest {
     }()
     
     var protocolVersion = (1, 0)
-	var remoteAddress: (host: String, port: UInt16) { return connection.peerName() }
+	var remoteAddress: (host: String, port: UInt16) {
+		guard let remote = connection.remoteAddress else {
+			return ("", 0)
+		}
+		return (remote.host, remote.port)
+	}
     var serverAddress = (host: "", port: 0 as UInt16)
     var serverName = ""
     var documentRoot = "./webroot"
