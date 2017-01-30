@@ -94,12 +94,15 @@ class HTTP11Response: HTTPResponse {
         }
         return nil
     }
-    
-    func addHeader(_ name: HTTPResponseHeader.Name, value: String) {
+	
+	@discardableResult
+    func addHeader(_ name: HTTPResponseHeader.Name, value: String) -> Self {
         headerStore.append((name, value))
+		return self
     }
-    
-    func setHeader(_ name: HTTPResponseHeader.Name, value: String) {
+	
+	@discardableResult
+    func setHeader(_ name: HTTPResponseHeader.Name, value: String) -> Self {
         var fi = [Int]()
         for i in 0..<headerStore.count {
             let (n, _) = headerStore[i]
@@ -111,7 +114,7 @@ class HTTP11Response: HTTPResponse {
         for i in fi {
             headerStore.remove(at: i)
         }
-        addHeader(name, value: value)
+        return addHeader(name, value: value)
     }
 	
     func flush(callback: @escaping (Bool) -> ()) {
