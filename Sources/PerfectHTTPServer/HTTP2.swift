@@ -132,7 +132,6 @@ final class HTTP2Response: HTTP11Response, HeaderListener {
 	func addHeader(name nam: [UInt8], value: [UInt8], sensitive: Bool) {
 		let n = UTF8Encoding.encode(bytes: nam)
 		let v = UTF8Encoding.encode(bytes: value)
-
 		switch n {
 		case ":status":
 			self.status = HTTPResponseStatus.statusFrom(code: Int(v) ?? 200)
@@ -150,12 +149,13 @@ open class HTTP2Client {
 
 	public let net = NetTCPSSL()
 	var host = ""
-	var timeoutSeconds = 5.0
+	var timeoutSeconds = 10.0
 	var ssl = true
 	var streams = [UInt32:StreamState]()
 	var streamCounter = UInt32(1)
 	
-	var encoder = HPACKEncoder()
+	let encoder = HPACKEncoder()
+	let decoder = HPACKDecoder()
 	
 	let closeLock = Threading.Lock()
 	
@@ -455,7 +455,7 @@ open class HTTP2Client {
 		let path = request.uri
 
 		do {
-
+			let encoder = HPACKEncoder()
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":method", valueStr: method.description)
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":scheme", valueStr: scheme)
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":path", valueStr: path, sensitive: false, incrementalIndexing: false)
@@ -591,7 +591,6 @@ open class HTTP2Client {
 
 	func encodeHeaders(headers: [(String, String)]) -> Bytes {
 		let b = Bytes()
-		let encoder = HPACKEncoder(maxCapacity: 4096)
 		for header in headers {
 			let n = UTF8Encoding.decode(string: header.0)
 			let v = UTF8Encoding.decode(string: header.1)
@@ -606,10 +605,10 @@ open class HTTP2Client {
 	}
 
 	func decodeHeaders(from frm: Bytes, endPosition: Int, listener: HeaderListener) {
-		let decoder = HPACKDecoder()
 		do {
 			try decoder.decode(input: frm, headerListener: listener)
 		} catch {
+			print("error while decoding headers \(error)")
 			self.close()
 		}
 	}

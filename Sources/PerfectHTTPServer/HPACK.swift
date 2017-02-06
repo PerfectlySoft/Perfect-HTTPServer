@@ -797,7 +797,7 @@ final class HPACKEncoder {
 	}
 	
 	/// Construct an HPACKEncoder with the indicated maximum capacity.
-	init(maxCapacity: Int = 256) {
+	init(maxCapacity: Int = 2048) {
 		self.capacity = maxCapacity
 		self.head.after = self.head
 		self.head.before = self.head
@@ -1151,6 +1151,7 @@ final class HPACKDecoder {
 	}
 	
 	func readName(_ index: Int) throws {
+//		print("index \(index)")
 		if index <= StaticTable.length {
 			name = StaticTable.getEntry(index).name
 		} else if index - StaticTable.length <= dynamicTable.length {
