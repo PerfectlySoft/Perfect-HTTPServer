@@ -239,7 +239,7 @@ open class HTTPServer {
 		}
 	}
 	
-	func handleConnection(_ net: NetTCP) {
+	open func handleConnection(_ net: NetTCP) {
 		#if os(Linux)
 			var flag = 1
 			_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
