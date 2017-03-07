@@ -150,10 +150,10 @@ open class HTTPServer {
 	}
 	
 	/// Bind the server to the designated address/port
-  open func bind() throws {
+	open func bind() throws {
 		if let (cert, key) = ssl {
-      let socket = NetTCPSSL()
-      socket.tlsMethod = self.tlsMethod
+			let socket = NetTCPSSL()
+			socket.tlsMethod = self.tlsMethod
 			try socket.bind(port: serverPort, address: serverAddress)
 			socket.cipherList = self.cipherList
 			
