@@ -166,15 +166,14 @@ open class HTTPServer {
 					throw PerfectError.networkError(code, "Error setting clientCA : \(socket.errorStr(forCode: code))")
 				}
 			}
-			
-			guard socket.useCertificateChainFile(cert: cert) else {
-				let code = Int32(socket.errorCode())
-				throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+
+			if(cert.hasPrefix("-----BEGIN")) {
+				try self.setupSSL(socket, cert:cert, key: key)
 			}
-			guard socket.usePrivateKeyFile(cert: key) else {
-				let code = Int32(socket.errorCode())
-				throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+			else {
+				try self.setupSSLFromFiles(socket, cert: cert, key: key)
 			}
+
 			guard socket.checkPrivateKey() else {
 				let code = Int32(socket.errorCode())
 				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
@@ -184,6 +183,30 @@ open class HTTPServer {
 			let net = NetTCP()
 			try net.bind(port: serverPort, address: serverAddress)
 			self.net = net
+		}
+	}
+
+	func setupSSLFromFiles(_ socket: NetTCPSSL, cert: String, key: String) throws {
+		guard socket.useCertificateChainFile(cert: cert) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+		}
+		
+		guard socket.usePrivateKeyFile(cert: key) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+		}
+	}
+	
+	func setupSSL(_ socket: NetTCPSSL, cert: String, key: String) throws {
+		guard socket.useCertificateChain(cert: cert) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting certificate from PEM string: \(socket.errorStr(forCode: code))")
+		}
+		
+		guard socket.usePrivateKey(cert: key) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting private key from PEM string: \(socket.errorStr(forCode: code))")
 		}
 	}
 	
