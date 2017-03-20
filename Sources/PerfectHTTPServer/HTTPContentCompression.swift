@@ -39,37 +39,35 @@ class ZlibStream {
 		}
 	}
 	
-	func compress(_ bytes: [UInt8]) -> [UInt8] {
+	func compress(_ bytes: [UInt8], flush: Bool) -> [UInt8] {
+		if bytes.isEmpty && !flush {
+			return []
+		}
 		let needed = Int(compressBound(UInt(bytes.count)))
 		let dest = UnsafeMutablePointer<UInt8>.allocate(capacity: needed)
 		defer {
 			dest.deallocate(capacity: needed)
 		}
-		
-		var left = uInt(needed)
-		var sourceLen = uInt(bytes.count)
-		stream.next_out = dest
-		stream.avail_out = 0
-		stream.next_in = UnsafeMutablePointer(mutating: bytes)
-		stream.avail_in = 0
-		
-		while true {
-			if stream.avail_out == 0 {
-				stream.avail_out = left
-				left -= stream.avail_out
-			}
-			if stream.avail_in == 0 {
-				stream.avail_in = sourceLen
-				sourceLen -= stream.avail_in
-			}
-			let err = deflate(&stream, sourceLen > 0 ? Z_NO_FLUSH : Z_FINISH)
-			guard err == Z_OK else {
+		if !bytes.isEmpty {
+			stream.next_in = UnsafeMutablePointer(mutating: bytes)
+			stream.avail_in = uInt(bytes.count)
+		} else {
+			stream.next_in = nil
+			stream.avail_in = 0
+		}
+		var out = [UInt8]()
+		repeat {
+			stream.next_out = dest
+			stream.avail_out = uInt(needed)
+			let err = deflate(&stream, flush ? Z_FINISH : Z_NO_FLUSH)
+			guard err != Z_STREAM_ERROR else {
 				break
 			}
-		}
-		
-		let b2 = UnsafeRawBufferPointer(start: dest, count: Int(stream.total_out))
-		return [UInt8](b2)
+			let have = uInt(needed) - stream.avail_out
+			let b2 = UnsafeRawBufferPointer(start: dest, count: Int(have))
+			out.append(contentsOf: b2.map { $0 })
+		} while stream.avail_out == 0
+		return out
 	}
 	
 	func close() {
@@ -115,7 +113,7 @@ public extension HTTPFilter {
 							response.request.scratchPad["zlib-stream"] = stream
 						} else {
 							let old = response.bodyBytes
-							let new = stream.compress(old)
+							let new = stream.compress(old, flush: true)
 							response.bodyBytes = new
 							stream.close()
 							response.setHeader(.contentLength, value: "\(new.count)")
@@ -129,9 +127,9 @@ public extension HTTPFilter {
 				guard response.isStreaming, let stream = response.request.scratchPad["zlib-stream"] as? ZlibStream else {
 					return callback(.continue)
 				}
-				if response.bodyBytes.count > 0 {
-					response.bodyBytes = stream.compress(response.bodyBytes)
-				}
+				
+				let flush = response.request.scratchPad["_flushing_"] as? Bool ?? false
+				response.bodyBytes = stream.compress(response.bodyBytes, flush: flush)
 				return callback(.continue)
 			}
 			

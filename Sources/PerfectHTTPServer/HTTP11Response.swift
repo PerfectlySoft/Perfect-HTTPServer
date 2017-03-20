@@ -118,6 +118,11 @@ class HTTP11Response: HTTPResponse {
     }
 	
     func flush(callback: @escaping (Bool) -> ()) {
+		if let _ = self.filters {
+			// !FIX! this needs an API change for response filters to let them know 
+			// when a call is the last
+			self.request.scratchPad["_flushing_"] = true
+		}
         self.push {
             ok in
             guard ok else {
