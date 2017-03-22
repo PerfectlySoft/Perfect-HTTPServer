@@ -65,5 +65,5 @@ fastlane/screenshots
 fastlane/test_output
 
 Packages/
-*.xcodeproj/
+#*.xcodeproj/
 .DS_Store
