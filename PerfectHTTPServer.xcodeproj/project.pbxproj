@@ -3957,6 +3957,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectThread;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectThread;
 			};
 			name = Debug;
@@ -3977,6 +3978,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectThread;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectThread;
 			};
 			name = Release;
@@ -4001,6 +4003,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectNet;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectNet;
 			};
 			name = Debug;
@@ -4025,6 +4028,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectNet;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectNet;
 			};
 			name = Release;
@@ -4049,6 +4053,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectHTTP;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectHTTP;
 			};
 			name = Debug;
@@ -4073,6 +4078,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectHTTP;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectHTTP;
 			};
 			name = Release;
@@ -4100,6 +4106,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = CHTTPParser;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = CHTTPParser;
 			};
 			name = Debug;
@@ -4127,6 +4134,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = CHTTPParser;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = CHTTPParser;
 			};
 			name = Release;
@@ -4154,6 +4162,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = CZlib;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = CZlib;
 			};
 			name = Debug;
@@ -4181,6 +4190,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = CZlib;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = CZlib;
 			};
 			name = Release;
@@ -4207,6 +4217,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectHTTPServer;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectHTTPServer;
 			};
 			name = Debug;
@@ -4233,6 +4244,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectHTTPServer;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectHTTPServer;
 			};
 			name = Release;
@@ -4341,6 +4353,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectLib;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectLib;
 			};
 			name = Debug;
@@ -4361,6 +4374,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = PerfectLib;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = PerfectLib;
 			};
 			name = Release;
@@ -4386,6 +4400,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = COpenSSL;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = COpenSSL;
 			};
 			name = Debug;
@@ -4411,6 +4426,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = COpenSSL;
 				PRODUCT_MODULE_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
 				TARGET_NAME = COpenSSL;
 			};
 			name = Release;
