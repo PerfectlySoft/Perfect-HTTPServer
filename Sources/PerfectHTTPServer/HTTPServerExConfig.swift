@@ -81,7 +81,7 @@ private extension Route {
 		case let handlerFunc as ReturnsRequestHandlerGivenData:
 			handler = try handlerFunc(data)
 		default:
-			throw PerfectError.apiError("No valid handler was provided \"handler\"=\(data["handler"])")
+			throw PerfectError.apiError("No valid handler was provided \"handler\"=\(String(describing: data["handler"]))")
 		}
 		if let methodStr = data["method"] as? String {
 			self.init(method: HTTPMethod.from(string: methodStr.uppercased()), uri: uri, handler: handler)
@@ -111,7 +111,7 @@ private extension Route {
 		}
 		fn.initialize(to: templateWithData)
 		let p = UnsafeMutableRawPointer(fn).assumingMemoryBound(to: swift_func_wrapper.self)
-		p.pointee.functionObject.pointee.address = unsafeBitCast(ptr, to: UInt.self)
+		p.pointee.functionObject.pointee.address = UInt(bitPattern: ptr)
 		let callMe = fn.pointee
 		return try callMe(data)
 	}
@@ -161,7 +161,7 @@ private func findRequestFilter(_ named: String, data: [String:Any]) throws -> HT
 		}
 		fn.initialize(to: templateWithData)
 		let p = UnsafeMutableRawPointer(fn).assumingMemoryBound(to: swift_func_wrapper.self)
-		p.pointee.functionObject.pointee.address = unsafeBitCast(sym, to: UInt.self)
+		p.pointee.functionObject.pointee.address = UInt(bitPattern: sym)
 		let callMe = fn.pointee
 		return try callMe(data)
 	}
@@ -177,7 +177,7 @@ private func findResponseFilter(_ named: String, data: [String:Any]) throws -> H
 		}
 		fn.initialize(to: templateWithData)
 		let p = UnsafeMutableRawPointer(fn).assumingMemoryBound(to: swift_func_wrapper.self)
-		p.pointee.functionObject.pointee.address = unsafeBitCast(sym, to: UInt.self)
+		p.pointee.functionObject.pointee.address = UInt(bitPattern: sym)
 		let callMe = fn.pointee
 		return try callMe(data)
 	}
@@ -205,7 +205,7 @@ func filtersFrom(data: [[String:Any]]) throws -> [(HTTPRequestFilter, HTTPFilter
 		case let fnc as ReturnsRequestFilterGivenData:
 			filterObj = try fnc(e)
 		default:
-			throw PerfectError.apiError("The indicated filter could not be found \(e["name"]).")
+			throw PerfectError.apiError("The indicated filter could not be found \(String(describing: e["name"])).")
 		}
 		ret.append((filterObj, prio))
 	}
@@ -229,7 +229,7 @@ func filtersFrom(data: [[String:Any]]) throws -> [(HTTPResponseFilter, HTTPFilte
 		case let fnc as ReturnsResponseFilterGivenData:
 			filterObj = try fnc(e)
 		default:
-			throw PerfectError.apiError("The indicated filter could not be found \(e["name"]).")
+			throw PerfectError.apiError("The indicated filter could not be found \(String(describing: e["name"])).")
 		}
 		ret.append((filterObj, prio))
 	}
