@@ -30,9 +30,9 @@ import PerfectHTTP
 #endif
 
 /// Stand-alone HTTP server.
-public class HTTPServer {
+open class HTTPServer {
 	
-	private var net: NetTCP?
+	public var net: NetTCP?
 	
 	/// The directory in which web documents are sought.
 	/// Setting the document root will add a default URL route which permits
@@ -67,7 +67,8 @@ public class HTTPServer {
 	public var ssl: (sslCert: String, sslKey: String)?
 	public var caCert: String?
 	public var certVerifyMode: OpenSSLVerifyMode?
-	
+	public var tlsMethod: TLSMethod = .tlsV1_2
+  
 	public var cipherList = [
 		"ECDHE-ECDSA-AES256-GCM-SHA384",
 		"ECDHE-ECDSA-AES128-GCM-SHA256",
@@ -149,9 +150,10 @@ public class HTTPServer {
 	}
 	
 	/// Bind the server to the designated address/port
-	public func bind() throws {
+	open func bind() throws {
 		if let (cert, key) = ssl {
 			let socket = NetTCPSSL()
+			socket.tlsMethod = self.tlsMethod
 			try socket.bind(port: serverPort, address: serverAddress)
 			socket.cipherList = self.cipherList
 			
@@ -164,15 +166,14 @@ public class HTTPServer {
 					throw PerfectError.networkError(code, "Error setting clientCA : \(socket.errorStr(forCode: code))")
 				}
 			}
-			
-			guard socket.useCertificateChainFile(cert: cert) else {
-				let code = Int32(socket.errorCode())
-				throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+
+			if(cert.hasPrefix("-----BEGIN")) {
+				try self.setupSSL(socket, cert:cert, key: key)
 			}
-			guard socket.usePrivateKeyFile(cert: key) else {
-				let code = Int32(socket.errorCode())
-				throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+			else {
+				try self.setupSSLFromFiles(socket, cert: cert, key: key)
 			}
+
 			guard socket.checkPrivateKey() else {
 				let code = Int32(socket.errorCode())
 				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
@@ -182,6 +183,30 @@ public class HTTPServer {
 			let net = NetTCP()
 			try net.bind(port: serverPort, address: serverAddress)
 			self.net = net
+		}
+	}
+
+	func setupSSLFromFiles(_ socket: NetTCPSSL, cert: String, key: String) throws {
+		guard socket.useCertificateChainFile(cert: cert) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+		}
+		
+		guard socket.usePrivateKeyFile(cert: key) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+		}
+	}
+	
+	func setupSSL(_ socket: NetTCPSSL, cert: String, key: String) throws {
+		guard socket.useCertificateChain(cert: cert) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting certificate from PEM string: \(socket.errorStr(forCode: code))")
+		}
+		
+		guard socket.usePrivateKey(cert: key) else {
+			let code = Int32(socket.errorCode())
+			throw PerfectError.networkError(code, "Error setting private key from PEM string: \(socket.errorStr(forCode: code))")
 		}
 	}
 	
@@ -237,7 +262,7 @@ public class HTTPServer {
 		}
 	}
 	
-	func handleConnection(_ net: NetTCP) {
+	open func handleConnection(_ net: NetTCP) {
 		#if os(Linux)
 			var flag = 1
 			_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
