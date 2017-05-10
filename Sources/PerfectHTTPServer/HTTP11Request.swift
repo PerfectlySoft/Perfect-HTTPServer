@@ -77,7 +77,6 @@ class HTTP11Request: HTTPRequest {
     }
     
     lazy var postParams: [(String, String)] = {
-        
         if let mime = self.mimes {
             return mime.bodySpecs.filter { $0.file == nil }.map { ($0.fieldName, $0.fieldValue) }
         } else if let bodyString = self.postBodyString {
@@ -101,6 +100,7 @@ class HTTP11Request: HTTPRequest {
             }
         }
     }
+
     var postBodyString: String? {
         guard let bytes = postBodyBytes else {
             return nil
@@ -110,6 +110,18 @@ class HTTP11Request: HTTPRequest {
         }
         return UTF8Encoding.encode(bytes: bytes)
     }
+
+	var postBodyJson: [String: Any]? {
+        if let body = postBodyString {
+            do {
+                return try body.jsonDecode() as? [String : Any]
+            } catch {
+                return nil
+            }
+        }
+        return nil
+    }
+
     var postFileUploads: [MimeReader.BodySpec]? {
         guard let mimes = self.mimes else {
             return nil
