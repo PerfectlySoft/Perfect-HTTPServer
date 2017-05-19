@@ -53,6 +53,8 @@ If you are starting out with Perfect look at the main [Perfect](https://github.c
 
 If you are beginning a new project with Perfect look at the [PerfectTemplate](https://github.com/PerfectlySoft/PerfectTemplate) project for starter instructions.
 
+When building on Linux, OpenSSL 1.0.2+ is required for this package. On Ubuntu 14 or some Debian distributions you will need to update your OpenSSL before this package will build.
+
 ## QuickStart
 
 The following will clone an empty starter project:
@@ -66,7 +68,7 @@ let package = Package(
  name: "PerfectTemplate",
  targets: [],
  dependencies: [
-     .Package(url:"https://github.com/PerfectlySoft/Perfect-HTTPServer.git", majorVersion: 2, minor: 0)
+     .Package(url:"https://github.com/PerfectlySoft/Perfect-HTTPServer.git", majorVersion: 2)
     ]
 )
 ```
