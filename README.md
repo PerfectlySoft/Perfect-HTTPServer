@@ -46,7 +46,7 @@ This repository contains the main HTTP 1.1 server as well as the beginnings of t
 If you are using this server for your Perfect Server-Side Swift project then this will be the main dependency for your project.
 
 ```swift
-.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", majorVersion: 2, minor: 0)
+.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", majorVersion: 2)
 ```
 
 If you are starting out with Perfect look at the main [Perfect](https://github.com/PerfectlySoft/Perfect) repository for details.
