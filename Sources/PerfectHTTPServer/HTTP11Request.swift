@@ -43,102 +43,115 @@ private let httpQuestion = UnicodeScalar(63)
 
 
 class HTTP11Request: HTTPRequest {
-    var method: HTTPMethod = .get
-    var path = ""
-    var queryString = ""
-    
-    lazy var queryParams: [(String, String)] = {
-        return self.deFormURLEncoded(string: self.queryString)
-    }()
-    
-    var protocolVersion = (1, 0)
+	var method: HTTPMethod = .get
+	var path: String {
+		get {
+			return "/" + pathComponents.map { $0.stringByEncodingURL }.joined(separator: "/")
+		}
+		set {
+			var components = newValue.characters.split(separator: "/").map { String($0).stringByDecodingURL ?? "" }
+			if newValue.endsWithFilePathSeparator {
+				components.append("")
+			}
+			pathComponents = components
+			
+		}
+	}
+	var pathComponents = [String]()
+	var queryString = ""
+	
+	lazy var queryParams: [(String, String)] = {
+		return self.deFormURLEncoded(string: self.queryString)
+	}()
+	
+	var protocolVersion = (1, 0)
 	var remoteAddress: (host: String, port: UInt16) {
 		guard let remote = connection.remoteAddress else {
 			return ("", 0)
 		}
 		return (remote.host, remote.port)
 	}
-    var serverAddress = (host: "", port: 0 as UInt16)
-    var serverName = ""
-    var documentRoot = "./webroot"
+	var serverAddress = (host: "", port: 0 as UInt16)
+	var serverName = ""
+	var documentRoot = "./webroot"
 	var urlVariables = [String:String]()
 	var scratchPad = [String:Any]()
 	
-    private var headerStore = Dictionary<HTTPRequestHeader.Name, [UInt8]>()
-    
-    var headers: AnyIterator<(HTTPRequestHeader.Name, String)> {
-        var g = self.headerStore.makeIterator()
-        return AnyIterator<(HTTPRequestHeader.Name, String)> {
-            guard let n = g.next() else {
-                return nil
-            }
-            return (n.key, UTF8Encoding.encode(bytes: n.value))
-        }
-    }
-    
-    lazy var postParams: [(String, String)] = {
-        
-        if let mime = self.mimes {
-            return mime.bodySpecs.filter { $0.file == nil }.map { ($0.fieldName, $0.fieldValue) }
-        } else if let bodyString = self.postBodyString {
-            return self.deFormURLEncoded(string: bodyString)
-        }
-        return [(String, String)]()
-    }()
-    
-    var postBodyBytes: [UInt8]? {
-        get {
-            if let _ = mimes {
-                return nil
-            }
-            return workingBuffer
-        }
-        set {
-            if let nv = newValue {
-                workingBuffer = nv
-            } else {
-                workingBuffer.removeAll()
-            }
-        }
-    }
-    var postBodyString: String? {
-        guard let bytes = postBodyBytes else {
-            return nil
-        }
-        if bytes.isEmpty {
-            return ""
-        }
-        return UTF8Encoding.encode(bytes: bytes)
-    }
-    var postFileUploads: [MimeReader.BodySpec]? {
-        guard let mimes = self.mimes else {
-            return nil
-        }
-        return mimes.bodySpecs
-    }
-    
-    var connection: NetTCP
-    var workingBuffer = [UInt8]()
-    var workingBufferOffset = 0
-    
-    var mimes: MimeReader?
-    
-    var contentType: String? {
+	private var headerStore = Dictionary<HTTPRequestHeader.Name, [UInt8]>()
+	
+	var headers: AnyIterator<(HTTPRequestHeader.Name, String)> {
+		var g = self.headerStore.makeIterator()
+		return AnyIterator<(HTTPRequestHeader.Name, String)> {
+			guard let n = g.next() else {
+				return nil
+			}
+			return (n.key, UTF8Encoding.encode(bytes: n.value))
+		}
+	}
+	
+	lazy var postParams: [(String, String)] = {
+		
+		if let mime = self.mimes {
+			return mime.bodySpecs.filter { $0.file == nil }.map { ($0.fieldName, $0.fieldValue) }
+		} else if let bodyString = self.postBodyString {
+			return self.deFormURLEncoded(string: bodyString)
+		}
+		return [(String, String)]()
+	}()
+	
+	var postBodyBytes: [UInt8]? {
+		get {
+			if let _ = mimes {
+				return nil
+			}
+			return workingBuffer
+		}
+		set {
+			if let nv = newValue {
+				workingBuffer = nv
+			} else {
+				workingBuffer.removeAll()
+			}
+		}
+	}
+	var postBodyString: String? {
+		guard let bytes = postBodyBytes else {
+			return nil
+		}
+		if bytes.isEmpty {
+			return ""
+		}
+		return UTF8Encoding.encode(bytes: bytes)
+	}
+	var postFileUploads: [MimeReader.BodySpec]? {
+		guard let mimes = self.mimes else {
+			return nil
+		}
+		return mimes.bodySpecs
+	}
+	
+	var connection: NetTCP
+	var workingBuffer = [UInt8]()
+	var workingBufferOffset = 0
+	
+	var mimes: MimeReader?
+	
+	var contentType: String? {
 		guard let v = self.headerStore[.contentType] else {
 			return nil
 		}
 		return UTF8Encoding.encode(bytes: v)
-    }
-    
-    lazy var contentLength: Int = {
-        guard let cl = self.headerStore[.contentLength] else {
-            return 0
-        }
+	}
+	
+	lazy var contentLength: Int = {
+		guard let cl = self.headerStore[.contentLength] else {
+			return 0
+		}
 		let conv = UTF8Encoding.encode(bytes: cl)
-        return Int(conv) ?? 0
-    }()
-    
-    typealias StatusCallback = (HTTPResponseStatus) -> ()
+		return Int(conv) ?? 0
+	}()
+	
+	typealias StatusCallback = (HTTPResponseStatus) -> ()
 	
 	var parser = http_parser()
 	var parserSettings = http_parser_settings()
@@ -155,8 +168,8 @@ class HTTP11Request: HTTPRequest {
 		return Unmanaged<HTTP11Request>.fromOpaque(d).takeUnretainedValue()
 	}
 	
-    init(connection: NetTCP) {
-        self.connection = connection
+	init(connection: NetTCP) {
+		self.connection = connection
 		
 		parserSettings.on_message_begin = {
 			parser -> Int32 in
@@ -195,7 +208,7 @@ class HTTP11Request: HTTPRequest {
 		http_parser_init(&parser, HTTP_REQUEST)
 		
 		self.parser.data = Unmanaged.passUnretained(self).toOpaque()
-    }
+	}
 	
 	func parserMessageBegin() -> Int {
 		self.enteringState(.messageBegin, data: nil, length: 0)
@@ -266,43 +279,85 @@ class HTTP11Request: HTTPRequest {
 		}
 	}
 	
+	// parse from workingBuffer contents
+	func parseURI() -> ([String], String) {
+		enum ParseURLState {
+			case slash, component, query
+		}
+		var state = ParseURLState.slash
+		var gen = workingBuffer.makeIterator()
+		var decoder = UTF8()
+		var pathComponents = [String]()
+		var component = ""
+		var queryString = ""
+		
+		let question = UnicodeScalar(63)
+		let slash = UnicodeScalar(47)
+		
+		loopy:
+			repeat {
+				let res = decoder.decode(&gen)
+				switch res {
+				case .scalarValue(let uchar):
+					switch state {
+					case .slash:
+						if uchar == question {
+							state = .query
+							pathComponents.append("")
+						} else if uchar != slash {
+							state = .component
+							component = String(Character(uchar))
+						}
+					case .component:
+						if uchar == question {
+							state = .query
+							pathComponents.append(component.stringByDecodingURL ?? "")
+						} else if uchar == slash {
+							state = .slash
+							pathComponents.append(component.stringByDecodingURL ?? "")
+						} else {
+							component.append(Character(uchar))
+						}
+					case .query:
+						queryString.append(Character(uchar))
+					}
+				case .emptyInput, .error:
+					switch state {
+					case .slash:
+						pathComponents.append("")
+					case .component:
+						pathComponents.append(component.stringByDecodingURL ?? "")
+					case .query:
+						()
+					}
+					break loopy
+				}
+		} while true
+		return (pathComponents, queryString)
+	}
+	
 	func leavingState() {
 		switch state {
 		case .url:
-			let urlString = UTF8Encoding.encode(bytes: self.workingBuffer)
-			let urlStringSplit = urlString.characters.split(separator: "?")
-			self.path = "/"
-			if urlStringSplit.count > 0 {
-				let pathStr = String(urlStringSplit[0])
-				let components = pathStr.filePathComponents
-				let joinedComponents = components.flatMap { ($0.isEmpty || $0 == "/") ? nil : $0.stringByDecodingURL }.joined(separator: "/")
-				self.path.append(joinedComponents)
-				if pathStr.hasSuffix("/") && self.path != "/" {
-					self.path.append("/")
-				}
-			}
-			if urlStringSplit.count > 1 {
-				self.queryString = String(urlStringSplit[1])
-			} else {
-				self.queryString = ""
-			}
-			self.workingBuffer.removeAll()
+			(self.pathComponents, self.queryString) = parseURI()
+			workingBuffer.removeAll()
 		case .headersComplete:
 			let methodId = parser.method
 			if let methodName = http_method_str(http_method(rawValue: methodId)) {
 				self.method = HTTPMethod.from(string: String(validatingUTF8: methodName) ?? "GET")
 			}
-			self.protocolVersion = (Int(self.parser.http_major), Int(self.parser.http_minor))
-			self.workingBuffer.removeAll()
+			protocolVersion = (Int(parser.http_major), Int(parser.http_minor))
+			workingBuffer.removeAll()
 		case .headerField:
-			self.lastHeaderName = UTF8Encoding.encode(bytes: self.workingBuffer)
-			self.workingBuffer.removeAll()
+			workingBuffer.append(0)
+			lastHeaderName = String(validatingUTF8: UnsafeMutableRawPointer(mutating: workingBuffer).assumingMemoryBound(to: Int8.self))
+			workingBuffer.removeAll()
 		case .headerValue:
 			if let name = self.lastHeaderName {
-				self.setHeader(named: name, value: self.workingBuffer)
+				setHeader(named: name, value: self.workingBuffer)
 			}
-			self.lastHeaderName = nil
-			self.workingBuffer.removeAll()
+			lastHeaderName = nil
+			workingBuffer.removeAll()
 		case .body:
 			()
 		case .messageComplete:
@@ -312,38 +367,37 @@ class HTTP11Request: HTTPRequest {
 		}
 	}
 	
-    func header(_ named: HTTPRequestHeader.Name) -> String? {
+	func header(_ named: HTTPRequestHeader.Name) -> String? {
 		guard let v = headerStore[named] else {
 			return nil
 		}
 		return UTF8Encoding.encode(bytes: v)
-    }
-    
-    func addHeader(_ named: HTTPRequestHeader.Name, value: String) {
-        guard let existing = headerStore[named] else {
-            self.headerStore[named] = [UInt8](value.utf8)
-            return
-        }
+	}
+	
+	func addHeader(_ named: HTTPRequestHeader.Name, value: String) {
+		guard let existing = headerStore[named] else {
+			self.headerStore[named] = [UInt8](value.utf8)
+			return
+		}
 		let valueBytes = [UInt8](value.utf8)
 		let newValue: [UInt8]
-        if named == .cookie {
-            newValue = existing + "; ".utf8 + valueBytes
-        } else {
-            newValue = existing + ", ".utf8 + valueBytes
-        }
+		if named == .cookie {
+			newValue = existing + "; ".utf8 + valueBytes
+		} else {
+			newValue = existing + ", ".utf8 + valueBytes
+		}
 		self.headerStore[named] = newValue
-    }
-    
-    func setHeader(_ named: HTTPRequestHeader.Name, value: String) {
-        headerStore[named] = [UInt8](value.utf8)
-    }
-    
-    func setHeader(named: String, value: [UInt8]) {
-        let lowered = named.lowercased()
-        headerStore[HTTPRequestHeader.Name.fromStandard(name: lowered)] = value
-    }
-    
-    func readRequest(callback: @escaping StatusCallback) {
+	}
+	
+	func setHeader(_ named: HTTPRequestHeader.Name, value: String) {
+		headerStore[named] = [UInt8](value.utf8)
+	}
+	
+	func setHeader(named: String, value: [UInt8]) {
+		headerStore[HTTPRequestHeader.Name.fromStandard(name: named)] = value
+	}
+	
+	func readRequest(callback: @escaping StatusCallback) {
 		self.connection.readSomeBytes(count: httpReadSize) {
 			b in
 			if let b = b, b.count > 0 {
@@ -368,7 +422,7 @@ class HTTP11Request: HTTPRequest {
 				}
 			}
 		}
-    }
+	}
 	
 	// a true return value indicates that we should keep reading data
 	// false indicates that the request either was fully read and is being processed or that the request failed
@@ -392,27 +446,27 @@ class HTTP11Request: HTTPRequest {
 		}
 		return true
 	}
-    
-    func putPostData(_ b: [UInt8]) {
-        if self.workingBuffer.count == 0 && self.mimes == nil {
-            if let contentType = self.contentType,
+	
+	func putPostData(_ b: [UInt8]) {
+		if self.workingBuffer.count == 0 && self.mimes == nil {
+			if let contentType = self.contentType,
 				contentType.characters.starts(with: "multipart/form-data".characters) {
-                self.mimes = MimeReader(contentType)
-            }
-        }
-        if let mimes = self.mimes {
-            return mimes.addToBuffer(bytes: b)
-        } else {
-            self.workingBuffer.append(contentsOf: b)
-        }
-    }
-    
-    func deFormURLEncoded(string: String) -> [(String, String)] {
-        return string.characters.split(separator: "&").map(String.init).flatMap {
-            let d = $0.characters.split(separator: "=", maxSplits: 1).flatMap { String($0).stringByDecodingURL }
-            if d.count == 2 { return (d[0], d[1]) }
-            if d.count == 1 { return (d[0], "") }
-            return nil
-        }
-    }
+				self.mimes = MimeReader(contentType)
+			}
+		}
+		if let mimes = self.mimes {
+			return mimes.addToBuffer(bytes: b)
+		} else {
+			self.workingBuffer.append(contentsOf: b)
+		}
+	}
+	
+	func deFormURLEncoded(string: String) -> [(String, String)] {
+		return string.characters.split(separator: "&").map(String.init).flatMap {
+			let d = $0.characters.split(separator: "=", maxSplits: 1).flatMap { String($0).stringByDecodingURL }
+			if d.count == 2 { return (d[0], d[1]) }
+			if d.count == 1 { return (d[0], "") }
+			return nil
+		}
+	}
 }
