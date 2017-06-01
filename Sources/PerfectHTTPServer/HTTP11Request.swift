@@ -333,6 +333,9 @@ class HTTP11Request: HTTPRequest {
 					break loopy
 				}
 		} while true
+		if pathComponents.isEmpty || (pathComponents.count == 1 && pathComponents.first!.isEmpty) {
+			pathComponents = ["/"]
+		}
 		return (pathComponents, queryString)
 	}
 	

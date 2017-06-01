@@ -322,7 +322,7 @@ public class HTTPServer {
 	
 	private func routeRequest(_ request: HTTPRequest, response: HTTPResponse) {
 		let pathInfo = request.path
-		if let nav = self.routeNavigator, let handler = nav.findHandler(uri: pathInfo, webRequest: request) {
+		if let nav = self.routeNavigator, let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
 			handler(request, response)
 		} else {
 			response.status = .notFound
