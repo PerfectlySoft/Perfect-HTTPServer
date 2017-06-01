@@ -73,8 +73,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			guard case .ok = ok else {
 				return XCTAssert(false, "\(ok)")
 			}
-			XCTAssertTrue(connection.header(.custom(name: "x-foo")) == "bar", "\(connection.headers)")
-			XCTAssertTrue(connection.header(.custom(name: "x-bar")) == "", "\(connection.headers)")
+			connection.headers.forEach { print($0) }
+			XCTAssertTrue(connection.header(.custom(name: "X-Foo")) == "bar", "\(connection.headers)")
+			XCTAssertTrue(connection.header(.custom(name: "X-Bar")) == "", "\(connection.headers)")
 			XCTAssertTrue(connection.contentType == "application/x-www-form-urlencoded", "\(connection.headers)")
 		})
 	}
@@ -174,6 +175,46 @@ class PerfectHTTPServerTests: XCTestCase {
 				XCTAssert(cookie.1 == "")
 			}
 		}
+	}
+	
+	func testWebRequestPath1() {
+		let connection = ShimHTTPRequest()
+		let fullHeaders = "GET /pathA/pathB/path%20c HTTP/1.1\r\nX-Foo: bar\r\nX-Bar: \r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"
+		
+		XCTAssert(false == connection.didReadSomeBytes(Array(fullHeaders.utf8)) {
+			ok in
+			
+			guard case .ok = ok else {
+				return XCTAssert(false, "\(ok)")
+			}
+			XCTAssertEqual(connection.path, "/pathA/pathB/path%20c")
+			XCTAssertEqual(connection.pathComponents, ["pathA", "pathB", "path c"])
+		})
+	}
+	
+	func testWebRequestPath2() {
+		let connection = ShimHTTPRequest()
+		let fullHeaders = "GET /pathA/pathB//path%20c/?a=b&c=d%20e HTTP/1.1\r\nX-Foo: bar\r\nX-Bar: \r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"
+		
+		XCTAssert(false == connection.didReadSomeBytes(Array(fullHeaders.utf8)) {
+			ok in
+			
+			guard case .ok = ok else {
+				return XCTAssert(false, "\(ok)")
+			}
+			XCTAssertEqual(connection.path, "/pathA/pathB/path%20c/")
+			XCTAssertEqual(connection.pathComponents, ["pathA", "pathB", "path c", ""])
+			XCTAssert(connection.param(name: "a") == "b")
+			XCTAssert(connection.param(name: "c") == "d e")
+			})
+	}
+	
+	func testWebRequestPath3() {
+		let connection = ShimHTTPRequest()
+		let path = "/pathA/pathB//path%20c/"
+		connection.path = path
+		XCTAssertEqual(connection.path, "/pathA/pathB/path%20c/")
+		XCTAssertEqual(connection.pathComponents, ["pathA", "pathB", "path c", ""])
 	}
 	
 	func testSimpleHandler() {
@@ -961,7 +1002,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			("testResponseFilters", testResponseFilters),
 			("testStreamingResponseFilters", testStreamingResponseFilters),
 			("testSlowClient", testSlowClient),
-			("testServerConf1", testServerConf1)
+			("testServerConf1", testServerConf1),
+			("testWebRequestPath1", testWebRequestPath1),
+			("testWebRequestPath2", testWebRequestPath2),
+			("testWebRequestPath3", testWebRequestPath3)
         ]
     }
 }
