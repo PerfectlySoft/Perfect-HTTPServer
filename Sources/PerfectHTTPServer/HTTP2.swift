@@ -171,7 +171,7 @@ open class HTTP2Client {
 	}
 
 	public init() {
-
+		
 	}
 
 	func dequeueFrame(timeoutSeconds timeout: Double) -> HTTP2Frame? {
@@ -244,7 +244,7 @@ open class HTTP2Client {
 				if let frame = f {
 //					print("Read frame \(frame.typeStr) \(frame.flagsStr) \(frame.streamId)")
 //					if frame.length > 0 {
-//						print("Read frame payload \(frame.length) \(UTF8Encoding.encode(frame.payload!))")
+//						print("Read frame payload \(frame.length) \(UTF8Encoding.encode(bytes: frame.payload!))")
 //					}
 					self?.frameReadEvent.doWithLock {
 						switch frame.type {
@@ -324,7 +324,7 @@ open class HTTP2Client {
 
 	public func close() {
 		self.closeLock.doWithLock {
-			self.net.close()
+			self.net.shutdown()
 		}
 	}
 
@@ -340,8 +340,10 @@ open class HTTP2Client {
 		do {
 			try net.connect(address: hst, port: port, timeoutSeconds: timeoutSeconds) {
 				n in
-
+				
 				if let net = n as? NetTCPSSL {
+					net.fd.switchToNonBlocking()
+					net.fd.switchToBlocking() // !FIX!
 
 					if ssl {
 						net.beginSSL {
@@ -463,7 +465,7 @@ open class HTTP2Client {
 			try encoder.encodeHeader(out: headerBytes, nameStr: "content-length", valueStr: "\(request.postBodyBytes?.count ?? 0)")
 
 			for (name, value) in request.headers {
-				let lowered  = name.standardName
+				let lowered  = name.standardName.lowercased()
 				var inc = true
 				// this is APNS specific in that Apple wants the apns-id and apns-expiration headers to be indexed on the first request but not indexed on subsequent requests
 				// !FIX! need to enable the caller to indicate policies such as this
