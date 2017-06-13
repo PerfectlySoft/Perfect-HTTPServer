@@ -199,7 +199,7 @@ open class HTTP2Client {
 			if self.frameQueue.count > 0 {
 				for i in 0..<self.frameQueue.count {
 					let frameTest = self.frameQueue[i]
-					if frameTest.streamId == streamId {
+					if frameTest.streamId == streamId || frameTest.type == HTTP2_GOAWAY {
 						self.frameQueue.remove(at: i)
 						frame = frameTest
 						break
@@ -389,7 +389,7 @@ open class HTTP2Client {
 					if bytes.availableExportBytes > 0 {
 						message = UTF8Encoding.encode(bytes: bytes.exportBytes(count: bytes.availableExportBytes))
 					}
-
+					
 					let bytes2 = Bytes()
 					let _ = bytes2.import32Bits(from: streamId.hostToNet)
                             .import32Bits(from: 0)
@@ -399,8 +399,8 @@ open class HTTP2Client {
 
 						self.close()
 					}
-					callback(nil, "\(errorCode) \(message)")
 					streamOpen = false
+					callback(nil, "\(errorCode) \(message)")
 				case HTTP2_HEADERS:
 					let padded = (frame.flags & HTTP2_PADDED) != 0
 //					let priority = (frame.flags & HTTP2_PRIORITY) != 0
