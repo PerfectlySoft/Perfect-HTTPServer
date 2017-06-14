@@ -31,7 +31,7 @@ class HTTP11Response: HTTPResponse {
     var status = HTTPResponseStatus.ok
     var headerStore = Array<(HTTPResponseHeader.Name, String)>()
     var bodyBytes = [UInt8]()
-    
+    var bodyPrefix = [UInt8]()
     var headers: AnyIterator<(HTTPResponseHeader.Name, String)> {
         var g = self.headerStore.makeIterator()
         return AnyIterator<(HTTPResponseHeader.Name, String)> {
@@ -186,13 +186,8 @@ class HTTP11Response: HTTPResponse {
 			responseString.append("\(n.standardName): \(v)\r\n")
 		}
 		responseString.append("\r\n")
-		connection.write(string: responseString) {
-			sent in
-			guard sent > 0 else {
-				return self.abort()
-			}
-			self.push(callback: callback)
-		}
+		bodyPrefix = Array(responseString.utf8)
+		self.push(callback: callback)
 	}
 	
 	func filterBodyBytes(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: ([UInt8]) -> ()) {
@@ -225,7 +220,7 @@ class HTTP11Response: HTTPResponse {
 	
 	func finishFilterBodyBytes(callback: (_ bodyBytes: [UInt8]) -> ()) {
 		let bytes = self.bodyBytes
-		self.bodyBytes = [UInt8]()
+		self.bodyBytes = []
 		callback(bytes)
 	}
 	
@@ -272,6 +267,12 @@ class HTTP11Response: HTTPResponse {
     }
     
     func pushNonStreamed(bytes: [UInt8], callback: @escaping (Bool) -> ()) {
+		if bodyPrefix.count > 0 {
+			let newBytes = bodyPrefix + bytes
+			bodyPrefix = []
+			return pushNonStreamed(bytes: newBytes, callback: callback)
+		}
+		
         let bodyCount = bytes.count
         guard bodyCount > 0 else {
             return callback(true)
