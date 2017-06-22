@@ -980,6 +980,40 @@ class PerfectHTTPServerTests: XCTestCase {
 			configs.forEach { $0.terminate() }
 		}
 	}
+	
+	func testHTTP2Server() {
+		
+		var secureRoutes = Routes()
+		secureRoutes.add(uri: "/**") {
+			request, response in
+			// Respond with a simple message.
+			response.setHeader(.contentType, value: "text/html")
+			response.appendBody(string: "<html><title>Hello, world!</title><body>")
+				.appendBody(string: request.headers.map { "\($0.0): \($0.1)" }.joined(separator: "<br>"))
+				
+				.appendBody(string: "<p>UPLOADS: \(request.postFileUploads)</p>")
+				
+				.appendBody(string: "<p>POST: \(request.postBodyString)</p>")
+				
+				.appendBody(string: "</body></html>")
+			// Ensure that response.completed() is called when your processing is done.
+			response.completed()
+		}
+		
+		let securePort = 8181
+		let tls = TLSConfiguration(certPath: "/Users/kjessup/new.cert.pem")
+		
+		do {
+			try HTTPServer.launch(
+				.secureServer(tls,
+				              name: "localhost",
+				              port: securePort,
+				              routes: secureRoutes))
+		} catch {
+			fatalError("Error thrown at top level \(error)")
+		}
+	}
+	
 /*
 	func testScratch() {
 		try! testingScratch()
