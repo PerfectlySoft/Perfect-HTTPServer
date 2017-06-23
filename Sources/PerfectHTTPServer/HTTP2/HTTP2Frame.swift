@@ -15,6 +15,21 @@ enum HTTP2FrameType: UInt8 {
 	case goAway = 0x7
 	case windowUpdate = 0x8
 	case continuation = 0x9
+	
+	var description: String {
+		switch self {
+		case .data: return "HTTP2_DATA"
+		case .headers: return "HTTP2_HEADERS"
+		case .priority: return "HTTP2_PRIORITY"
+		case .cancelStream: return "HTTP2_RST_STREAM"
+		case .settings: return "HTTP2_SETTINGS"
+		case .pushPromise: return "HTTP2_PUSH_PROMISE"
+		case .ping: return "HTTP2_PING"
+		case .goAway: return "HTTP2_GOAWAY"
+		case .windowUpdate: return "HTTP2_WINDOW_UPDATE"
+		case .continuation: return "HTTP2_CONTINUATION"
+		}
+	}
 }
 
 typealias HTTP2FrameFlag = UInt8
@@ -28,18 +43,19 @@ let flagPingAck: HTTP2FrameFlag = 0x1
 
 struct HTTP2Frame {
 	let length: UInt32 // 24-bit
-	let type: UInt8
+	let type: HTTP2FrameType
 	let flags: UInt8
 	let streamId: UInt32 // 31-bit
 	var payload: [UInt8]?
 	
+	// Deprecate this
 	init(length: UInt32,
 			type: UInt8,
 			flags: UInt8 = 0,
 			streamId: UInt32 = 0,
 			payload: [UInt8]? = nil) {
 		self.length = length
-		self.type = type
+		self.type = HTTP2FrameType(rawValue: type)!
 		self.flags = flags
 		self.streamId = streamId
 		self.payload = payload
@@ -49,34 +65,15 @@ struct HTTP2Frame {
 		 flags: UInt8 = 0,
 		 streamId: UInt32 = 0,
 		 payload: [UInt8]? = nil) {
-		self.init(length: UInt32(payload?.count ?? 0), type: type.rawValue, flags: flags, streamId: streamId, payload: payload)
+		self.length = UInt32(payload?.count ?? 0)
+		self.type = type
+		self.flags = flags
+		self.streamId = streamId
+		self.payload = payload
 	}
 	
 	var typeStr: String {
-		switch self.type {
-		case HTTP2_DATA:
-			return "HTTP2_DATA"
-		case HTTP2_HEADERS:
-			return "HTTP2_HEADERS"
-		case HTTP2_PRIORITY:
-			return "HTTP2_PRIORITY"
-		case HTTP2_RST_STREAM:
-			return "HTTP2_RST_STREAM"
-		case HTTP2_SETTINGS:
-			return "HTTP2_SETTINGS"
-		case HTTP2_PUSH_PROMISE:
-			return "HTTP2_PUSH_PROMISE"
-		case HTTP2_PING:
-			return "HTTP2_PING"
-		case HTTP2_GOAWAY:
-			return "HTTP2_GOAWAY"
-		case HTTP2_WINDOW_UPDATE:
-			return "HTTP2_WINDOW_UPDATE"
-		case HTTP2_CONTINUATION:
-			return "HTTP2_CONTINUATION"
-		default:
-			return "UNKNOWN_TYPE"
-		}
+		return type.description
 	}
 	
 	var flagsStr: String {
@@ -84,10 +81,10 @@ struct HTTP2Frame {
 		if flags == 0 {
 			s.append("NO FLAGS")
 		}
-		if (flags & HTTP2_END_STREAM) != 0 {
+		if (flags & flagEndStream) != 0 {
 			s.append(" +HTTP2_END_STREAM")
 		}
-		if (flags & HTTP2_END_HEADERS) != 0 {
+		if (flags & flagEndHeaders) != 0 {
 			s.append(" +HTTP2_END_HEADERS")
 		}
 		return s
@@ -101,7 +98,7 @@ struct HTTP2Frame {
 		data.append(UInt8((l >> 8) & 0xFF))
 		data.append(UInt8((l >> 16) & 0xFF))
 		
-		data.append(type)
+		data.append(type.rawValue)
 		data.append(flags)
 		
 		let s = streamId.hostToNet

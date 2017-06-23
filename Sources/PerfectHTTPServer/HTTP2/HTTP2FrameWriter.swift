@@ -15,9 +15,12 @@ class HTTP2FrameWriter {
 	private var enqueuedFrames = [HTTP2Frame]()
 	private let enqueuedFramesLock = Threading.Event()
 	private let writeFramesThread = DispatchQueue(label: "HTTP2FrameWriter")
+	private weak var errorDelegate: HTTP2NetErrorDelegate?
 	var windowSize = Int.max
-	init(_ net: NetTCP) {
+	
+	init(_ net: NetTCP, errorDelegate: HTTP2NetErrorDelegate) {
 		self.net = net
+		self.errorDelegate = errorDelegate
 		startFrameWriting()
 	}
 	
@@ -27,7 +30,7 @@ class HTTP2FrameWriter {
 			if enqueuedFrames.isEmpty {
 				callback()
 			} else {
-				_ = enqueuedFramesLock.wait()
+				_ = enqueuedFramesLock.wait(seconds: 0.1)
 			}
 			enqueuedFramesLock.unlock()
 		}
@@ -58,8 +61,19 @@ class HTTP2FrameWriter {
 			let bytes = frame.headerBytes() + (frame.payload ?? [])
 			self.net.write(bytes: bytes) {
 				wrote in
+				guard wrote == bytes.count else {
+					self.signalNetworkError()
+					return
+				}
 				self.startFrameWriting()
 			}
 		}
+	}
+	
+	func signalNetworkError() {
+		enqueuedFramesLock.lock()
+		enqueuedFrames.removeAll()
+		enqueuedFramesLock.unlock()
+		errorDelegate?.networkShutdown()
 	}
 }

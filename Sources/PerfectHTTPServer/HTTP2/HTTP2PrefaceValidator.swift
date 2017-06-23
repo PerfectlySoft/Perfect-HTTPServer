@@ -11,13 +11,13 @@ import PerfectNet
 let prefaceBytes = Array(http2ConnectionPreface.utf8)
 
 struct HTTP2PrefaceValidator {
-	init(_ net: NetTCP, timeoutSeconds: Double) {
+	init(_ net: NetTCP, timeoutSeconds: Double, callback: @escaping () -> ()) {
 		net.readBytesFully(count: prefaceBytes.count, timeoutSeconds: timeoutSeconds) {
 			bytes in
 			guard let b = bytes, b == prefaceBytes else {
 				return net.close()
 			}
-			_ = HTTP2Session(net)
+			callback()
 		}
 	}
 }

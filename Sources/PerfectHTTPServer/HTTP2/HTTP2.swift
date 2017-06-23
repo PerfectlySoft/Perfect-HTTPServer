@@ -17,24 +17,6 @@
 //===----------------------------------------------------------------------===//
 //
 
-let HTTP2_DATA: UInt8 = 0x0
-let HTTP2_HEADERS: UInt8 = 0x1
-let HTTP2_PRIORITY: UInt8 = 0x2
-let HTTP2_RST_STREAM: UInt8 = 0x3
-let HTTP2_SETTINGS: UInt8 = 0x4
-let HTTP2_PUSH_PROMISE: UInt8 = 0x5
-let HTTP2_PING: UInt8 = 0x6
-let HTTP2_GOAWAY: UInt8 = 0x7
-let HTTP2_WINDOW_UPDATE: UInt8 = 0x8
-let HTTP2_CONTINUATION: UInt8 = 0x9
-
-let HTTP2_END_STREAM: UInt8 = 0x1
-let HTTP2_END_HEADERS: UInt8 = 0x4
-let HTTP2_PADDED: UInt8 = 0x8
-let HTTP2_FLAG_PRIORITY: UInt8 = 0x20
-let HTTP2_SETTINGS_ACK = HTTP2_END_STREAM
-let HTTP2_PING_ACK = HTTP2_END_STREAM
-
 let SETTINGS_HEADER_TABLE_SIZE: UInt16 = 0x1
 let SETTINGS_ENABLE_PUSH: UInt16 = 0x2
 let SETTINGS_MAX_CONCURRENT_STREAMS: UInt16 = 0x3
@@ -44,6 +26,24 @@ let SETTINGS_MAX_HEADER_LIST_SIZE: UInt16 = 0x6
 
 let http2ConnectionPreface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
+enum HTTP2StreamState {
+	case idle, reserved, open, halfClosed, closed
+}
 
-
+enum HTTP2Error: UInt32 {
+	case noError = 0x0
+	case protocolError = 0x1
+	case internalError = 0x2
+	case flowControlError = 0x3
+	case settingsTimeout = 0x4
+	case streamClosed = 0x5
+	case frameSizeError = 0x6
+	case refusedStream = 0x7
+	case cancel = 0x8
+	case compressionError = 0x9
+	case connectError = 0xa
+	case enhanceYourCalm = 0xb
+	case inadequateSecurity = 0xc
+	case http11Required = 0xd
+}
 

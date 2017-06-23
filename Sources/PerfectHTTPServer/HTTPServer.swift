@@ -250,7 +250,9 @@ public class HTTPServer {
 	#endif
 		
 		if let netSSL = net as? NetTCPSSL, let neg = netSSL.alpnNegotiated, neg == ALPNSupport.http2.rawValue {
-			_ = HTTP2PrefaceValidator(net, timeoutSeconds: 5.0)
+			_ = HTTP2PrefaceValidator(net, timeoutSeconds: 5.0) {
+				_ = HTTP2Session(net, routeNavigator: self.routeNavigator!)
+			}
 			return
 		}
 		
@@ -269,9 +271,6 @@ public class HTTPServer {
 	func runRequest(_ request: HTTP11Request) {
 		request.documentRoot = self.documentRoot
 		let net = request.connection
-		// !FIX! check for upgrade to http/2
-		// switch to HTTP2Request/HTTP2Response
-		
 		let response = HTTP11Response(request: request, filters: responseFilters.isEmpty ? nil : responseFilters.makeIterator())
 		if response.isKeepAlive {
 			response.completedCallback = { [weak self] in
