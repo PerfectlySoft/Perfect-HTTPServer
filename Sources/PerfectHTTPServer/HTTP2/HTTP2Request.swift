@@ -48,7 +48,10 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 		}
 	}
 	func header(_ named: HTTPRequestHeader.Name) -> String? {
-		return nil
+		guard let v = headerStore[named] else {
+			return nil
+		}
+		return UTF8Encoding.encode(bytes: v)
 	}
 	func addHeader(_ named: HTTPRequestHeader.Name, value: String) {}
 	func setHeader(_ named: HTTPRequestHeader.Name, value: String) {}
@@ -88,6 +91,9 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 			streamState = .open
 		}
 		endOfHeaders = (frame.flags & flagEndHeaders) != 0
+		if debug {
+			print("\tstream: \(streamId)")
+		}
 		let padded = (frame.flags & flagPadded) != 0
 		let priority = (frame.flags & flagPriority) != 0
 		if let ba = frame.payload, ba.count > 0 {
@@ -124,6 +130,9 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 			streamState = .halfClosed
 		}
 		endOfHeaders = (frame.flags & flagEndHeaders) != 0
+		if debug {
+			print("\tstream: \(streamId)")
+		}
 		if let ba = frame.payload, ba.count > 0 {
 			let bytes = Bytes(existingBytes: ba)
 			do {

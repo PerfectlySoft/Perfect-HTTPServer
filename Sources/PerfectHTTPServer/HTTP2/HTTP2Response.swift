@@ -96,6 +96,16 @@ final class HTTP2Response: HTTPResponse {
 		guard h2Request.streamState != .closed else {
 			return callback(false)
 		}
+		if debug {
+			print("response header:")
+			print("\tstream: \(streamId)")
+			print("\t:status \(status.code)")
+			headerStore.forEach {
+				(arg0) in
+				let (name, value) = arg0
+				print("\t\(name.standardName.lowercased()): \(value)")
+			}
+		}
 		let bytes = Bytes()
 		do {
 			try encoder.encodeHeader(out: bytes, nameStr: ":status", valueStr: "\(status.code)")
