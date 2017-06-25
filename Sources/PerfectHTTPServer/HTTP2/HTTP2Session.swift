@@ -232,7 +232,7 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			switch identifier {
 			case SETTINGS_HEADER_TABLE_SIZE:
 				settings.headerTableSize = Int(value)
-				decoder.maxDynamicTableSize = Int(value)
+				decoder.setMaxHeaderTableSize(maxHeaderTableSize: Int(value))
 			case SETTINGS_ENABLE_PUSH:
 				settings.enablePush = value == 1
 			case SETTINGS_MAX_CONCURRENT_STREAMS:

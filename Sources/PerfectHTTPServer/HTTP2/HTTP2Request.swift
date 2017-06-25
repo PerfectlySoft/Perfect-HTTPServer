@@ -91,6 +91,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 				let _/*weight*/ = bytes.export8Bits()
 			}
 			do {
+				decoder.reset()
 				try decoder.decode(input: bytes, headerListener: self)
 			} catch {
 				session?.fatalError(streamId: streamId, error: .compressionError, msg: "error while decoding headers \(error)")
@@ -144,6 +145,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	// scheme, authority
 	func addHeader(name nam: [UInt8], value: [UInt8], sensitive: Bool) {
 		let n = UTF8Encoding.encode(bytes: nam)
+		print(n)
 		switch n {
 		case ":method":
 			method = HTTPMethod.from(string: UTF8Encoding.encode(bytes: value))

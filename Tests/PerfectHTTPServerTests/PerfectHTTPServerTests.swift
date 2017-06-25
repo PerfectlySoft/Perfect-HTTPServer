@@ -18,18 +18,19 @@ class PerfectHTTPServerTests: XCTestCase {
 	
 	func testHPACKEncode() {
 		
-		let encoder = HPACKEncoder(maxCapacity: 256)
+		let encoder = HPACKEncoder()
 		let b = Bytes()
 		
 		let headers = [
-			(":method", "POST"),
-			(":scheme", "https"),
-			(":path", "/3/device/00fc13adff785122b4ad28809a3420982341241421348097878e577c991de8f0"),
-			("host", "api.development.push.apple.com"),
-			("apns-id", "eabeae54-14a8-11e5-b60b-1697f925ec7b"),
-			("apns-expiration", "0"),
-			("apns-priority", "10"),
-			("content-length", "33")]
+//			(":method", "POST"),
+//			(":scheme", "https"),
+//			(":path", "/3/device/00fc13adff785122b4ad28809a3420982341241421348097878e577c991de8f0"),
+//			("host", "api.development.push.apple.com"),
+//			("apns-id", "eabeae54-14a8-11e5-b60b-1697f925ec7b"),
+//			("apns-expiration", "0"),
+//			("apns-priority", "10"),
+//			("content-length", "33"),
+			("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/603.2.4 (KHTML, like Gecko) Version/10.1.1 Safari/603.2.4")]
 		do {
 			for (n, v) in headers {
 				try encoder.encodeHeader(out: b, name: UTF8Encoding.decode(string: n), value: UTF8Encoding.decode(string: v), sensitive: false)
@@ -42,7 +43,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				}
 			}
 			
-			let decoder = HPACKDecoder(maxHeaderSize: 256, maxHeaderTableSize: 256)
+			let decoder = HPACKDecoder()
 			let l = Listener()
 			try decoder.decode(input: b, headerListener: l)
 			
@@ -52,8 +53,8 @@ class PerfectHTTPServerTests: XCTestCase {
 				let h1 = headers[i]
 				let h2 = l.headers[i]
 				
-				XCTAssert(h1.0 == h2.0)
-				XCTAssert(h1.1 == h2.1)
+				XCTAssertEqual(h1.0, h2.0)
+				XCTAssertEqual(h1.1, h2.1)
 			}
 			
 		}
@@ -987,6 +988,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		secureRoutes.add(uri: "/**") {
 			request, response in
 			// Respond with a simple message.
+			response.setHeader(.custom(name: "X-Foo"), value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/603.2.4 (KHTML, like Gecko) Version/10.1.1 Safari/603.2.4")
 			response.setHeader(.contentType, value: "text/html")
 			response.appendBody(string: "<html><title>Hello, world!</title><body>")
 				.appendBody(string: request.headers.map { "\($0.0): \($0.1)" }.joined(separator: "<br>"))

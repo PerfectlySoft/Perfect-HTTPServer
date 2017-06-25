@@ -680,7 +680,7 @@ final class HuffmanDecoder {
 		var current = 0
 		var bits = 0
 		for byte in buf {
-			let b = byte & 0xFF
+			let b = byte// & 0xFF
 			current = (current << 8) | Int(b)
 			bits += 8
 			while bits >= 8 {
@@ -717,16 +717,16 @@ final class HuffmanDecoder {
 		return retBytes
 	}
 	
-	static func buildTree(codes cods: [Int], lengths: [UInt8]) -> Node {
+	static func buildTree(codes: [Int], lengths: [UInt8]) -> Node {
 		let root = Node()
-		for i in 0..<cods.count {
-			insert(root: root, symbol: i, code: cods[i], length: lengths[i])
+		for i in 0..<codes.count {
+			insert(root: root, symbol: i, code: codes[i], length: lengths[i])
 		}
 		return root
 	}
 	
-	static func insert(root rooot: Node, symbol: Int, code: Int, length: UInt8) {
-		var current = rooot
+	static func insert(root: Node, symbol: Int, code: Int, length: UInt8) {
+		var current = root
 		var len = Int(length)
 		while len > 8 {
 			len -= 8
@@ -736,7 +736,7 @@ final class HuffmanDecoder {
 			}
 			current = current.children![i]!
 		}
-		let terminal = Node(symbol: symbol, bits: length)
+		let terminal = Node(symbol: symbol, bits: UInt8(len))
 		let shift = 8 - len
 		let start = (code << shift) & 0xFF
 		let end = 1 << shift
@@ -797,7 +797,7 @@ final class HPACKEncoder {
 	}
 	
 	/// Construct an HPACKEncoder with the indicated maximum capacity.
-	init(maxCapacity: Int = 2048) {
+	init(maxCapacity: Int = 4096) {
 		self.capacity = maxCapacity
 		self.head.after = self.head
 		self.head.before = self.head
@@ -1104,7 +1104,7 @@ final class HPACKDecoder {
 	var valueLength = 0
 	
 	/// Construct an HPACKDecoder with the given memory constraints.
-	init(maxHeaderSize: Int = 256, maxHeaderTableSize: Int = 256) {
+	init(maxHeaderSize: Int = 4096, maxHeaderTableSize: Int = 4096) {
 		self.dynamicTable = DynamicTable(initialCapacity: maxHeaderTableSize)
 		self.maxHeaderSize = maxHeaderSize
 		self.maxDynamicTableSize = maxHeaderTableSize
