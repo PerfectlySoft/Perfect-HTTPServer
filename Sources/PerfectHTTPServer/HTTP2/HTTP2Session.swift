@@ -133,13 +133,13 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			case .headers:
 				headersFrame(frame)
 			case .priority:
-				()
+				priorityFrame(frame)
 			case .cancelStream:
-				()
+				cancelStreamFrame(frame)
 			case .windowUpdate:
-				()
+				windowUpdateFrame(frame)
 			case .continuation:
-				()
+				continuationFrame(frame)
 			default:
 				fatalError(error: .protocolError, msg: "Invalid frame with stream id")
 			}
@@ -187,7 +187,14 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		sid += UInt32(b[3])
 		sid &= ~0x80000000
 		let windowSize = Int(sid.netToHost)
-		frameWriter?.windowSize = windowSize
+		if frame.streamId == 0 {
+			frameWriter?.windowSize = windowSize
+		} else {
+			guard let request = getRequest(frame.streamId) else {
+				return fatalError(error: .streamClosed, msg: "Invalid stream id")
+			}
+			request.windowUpdate(windowSize)
+		}
 	}
 
 	func headersFrame(_ frame: HTTP2Frame) {
@@ -205,8 +212,20 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		request.continuationFrame(frame)
 	}
 	
-	func pushPromiseFrame(_ frame: HTTP2Frame) {
-		print("pushPromiseFrame")
+	func priorityFrame(_ frame: HTTP2Frame) {
+		let streamId = frame.streamId
+		guard let request = getRequest(streamId) else {
+			return fatalError(error: .streamClosed, msg: "Invalid stream id")
+		}
+		request.priorityFrame(frame)
+	}
+	
+	func cancelStreamFrame(_ frame: HTTP2Frame) {
+		let streamId = frame.streamId
+		guard let request = getRequest(streamId) else {
+			return fatalError(error: .streamClosed, msg: "Invalid stream id")
+		}
+		request.cancelStreamFrame(frame)
 	}
 	
 	func pingFrame(_ frame: HTTP2Frame) {

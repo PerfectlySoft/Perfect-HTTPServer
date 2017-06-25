@@ -127,6 +127,17 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 		}
 	}
 	
+	func priorityFrame(_ frame: HTTP2Frame) {
+		
+	}
+	
+	func cancelStreamFrame(_ frame: HTTP2Frame) {
+		streamState = .closed
+	}
+	func windowUpdate(_ size: Int) {
+		windowSize += size
+	}
+	
 	func processRequest() {
 		let response = HTTP2Response(self)
 		routeRequest(response: response)

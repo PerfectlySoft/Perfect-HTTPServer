@@ -22,15 +22,20 @@ import PerfectHTTP
 
 final class HTTP2Response: HTTPResponse {
 	var request: HTTPRequest
-	var h2Request: HTTP2Request { return request as! HTTP2Request }
 	var status: HTTPResponseStatus = .ok
-	var isStreaming = false
+	var isStreaming = true // implicitly streamed
 	var bodyBytes: [UInt8] = []
 	var headerStore = Array<(HTTPResponseHeader.Name, String)>()
 	let filters: IndexingIterator<[[HTTPResponseFilter]]>?
 	var encoder: HPACKEncoder { return h2Request.session!.encoder }
 	var wroteHeaders = false
 	
+	var h2Request: HTTP2Request { return request as! HTTP2Request }
+	var frameWriter: HTTP2FrameWriter? { return h2Request.session?.frameWriter }
+	var windowSize: Int {
+		get { return h2Request.windowSize }
+		set { h2Request.windowSize = newValue }
+	}
 	init(_ request: HTTP2Request, filters: IndexingIterator<[[HTTPResponseFilter]]>? = nil) {
 		self.request = request
 		self.filters = filters
@@ -76,6 +81,9 @@ final class HTTP2Response: HTTPResponse {
 			return
 		}
 		wroteHeaders = true
+		guard h2Request.streamState != .closed else {
+			return
+		}
 		let bytes = Bytes()
 		do {
 			try encoder.encodeHeader(out: bytes, nameStr: ":status", valueStr: "\(status.code)")
@@ -88,12 +96,16 @@ final class HTTP2Response: HTTPResponse {
 			h2Request.session?.fatalError(streamId: h2Request.streamId, error: .internalError, msg: "Error while encoding headers")
 		}
 		let frame = HTTP2Frame(type: .headers, flags: flagEndHeaders, streamId: h2Request.streamId, payload: bytes.data)
-		h2Request.session?.frameWriter?.enqueueFrame(frame)
+		frameWriter?.enqueueFrame(frame)
 	}
 	
 	func pushBody(final: Bool) {
+		guard h2Request.streamState != .closed else {
+			return
+		}
 		let frame = HTTP2Frame(type: .data, flags: final ? flagEndStream : 0, streamId: h2Request.streamId, payload: bodyBytes)
-		h2Request.session?.frameWriter?.enqueueFrame(frame)
+		frameWriter?.enqueueFrame(frame)
+		bodyBytes = []
 	}
 	
 	func push(callback: @escaping (Bool) -> ()) {
@@ -104,6 +116,11 @@ final class HTTP2Response: HTTPResponse {
 	func completed() {
 		pushHeaders()
 		pushBody(final: true)
-		h2Request.session?.removeRequest(h2Request.streamId)
+		removeRequest()
+	}
+	
+	func removeRequest() {
+		let req = h2Request
+		req.session?.removeRequest(req.streamId)
 	}
 }
