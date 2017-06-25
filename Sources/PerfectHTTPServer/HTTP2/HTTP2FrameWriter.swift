@@ -16,7 +16,6 @@ class HTTP2FrameWriter {
 	private let enqueuedFramesLock = Threading.Event()
 	private let writeFramesThread = DispatchQueue(label: "HTTP2FrameWriter")
 	private weak var errorDelegate: HTTP2NetErrorDelegate?
-	var windowSize = Int.max
 	
 	init(_ net: NetTCP, errorDelegate: HTTP2NetErrorDelegate) {
 		self.net = net
@@ -66,9 +65,11 @@ class HTTP2FrameWriter {
 			self.net.write(bytes: bytes) {
 				wrote in
 				guard wrote == bytes.count else {
+					frame.sentCallback?(false)
 					self.signalNetworkError()
 					return
 				}
+				frame.sentCallback?(true)
 				self.startFrameWriting()
 			}
 		}

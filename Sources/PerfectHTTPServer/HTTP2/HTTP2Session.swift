@@ -49,10 +49,12 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	
 	private let streamsLock = Threading.Lock()
 	private var streams = [UInt32:HTTP2Request]()
+	var debug = false
 	
-	init(_ net: NetTCP, routeNavigator: RouteNavigator) {
+	init(_ net: NetTCP, routeNavigator: RouteNavigator, debug: Bool = true) {
 		self.net = net
 		self.routeNavigator = routeNavigator
+		self.debug = debug
 		frameReader = HTTP2FrameReader(net, frameReceiver: self, errorDelegate: self)
 		frameWriter = HTTP2FrameWriter(net, errorDelegate: self)
 		pinSelf()
@@ -171,6 +173,8 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			let response = HTTP2Frame(type: HTTP2FrameType.settings,
 			                          flags: flagSettingsAck)
 			frameWriter?.enqueueFrame(response)
+		} else if debug {
+			print("\tack")
 		}
 	}
 	
@@ -188,18 +192,25 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		sid &= ~0x80000000
 		let windowSize = Int(sid.netToHost)
 		if frame.streamId == 0 {
-			frameWriter?.windowSize = windowSize
+			settings.initialWindowSize += windowSize
+			if debug {
+				print("\t\(windowSize)")
+			}
 		} else {
 			guard let request = getRequest(frame.streamId) else {
 				return fatalError(error: .streamClosed, msg: "Invalid stream id")
 			}
 			request.windowUpdate(windowSize)
+			if debug {
+				print("\t\(windowSize) for stream \(frame.streamId)")
+			}
 		}
 	}
 
 	func headersFrame(_ frame: HTTP2Frame) {
 		let streamId = frame.streamId
 		let request = HTTP2Request(streamId, session: self)
+		request.windowSize = settings.initialWindowSize
 		putRequest(request)
 		request.headersFrame(frame)
 	}
@@ -226,6 +237,9 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			return fatalError(error: .streamClosed, msg: "Invalid stream id")
 		}
 		request.cancelStreamFrame(frame)
+		if debug {
+			print("\t\(streamId)")
+		}
 	}
 	
 	func pingFrame(_ frame: HTTP2Frame) {
@@ -264,12 +278,25 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			case settingsInitialWindowSize:
 				settings.initialWindowSize = value
 			case settingsMaxFrameSize:
+				guard value <= 16777215 else {
+					fatalError(error: .protocolError, msg: "Max frame size too large")
+					return
+				}
 				settings.maxFrameSize = value
 			case settingsMaxHeaderListSize:
 				settings.maxHeaderListSize = value
 			default:
 				() // must ignore unrecognized settings
 			}
+		}
+		if debug {
+			print("settings:")
+			print("\theaderTableSize: \(settings.headerTableSize)")
+			print("\tenablePush: \(settings.enablePush)")
+			print("\tmaxConcurrentStreams: \(settings.maxConcurrentStreams)")
+			print("\tinitialWindowSize: \(settings.initialWindowSize)")
+			print("\tmaxFrameSize: \(settings.maxFrameSize)")
+			print("\tmaxHeaderListSize: \(settings.maxHeaderListSize)")
 		}
 	}
 }

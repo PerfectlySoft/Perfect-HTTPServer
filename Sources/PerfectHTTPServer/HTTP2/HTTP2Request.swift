@@ -20,6 +20,7 @@
 import PerfectHTTP
 import PerfectNet
 import PerfectLib
+import PerfectThread
 
 final class HTTP2Request: HTTPRequest, HeaderListener {
 	var method: HTTPMethod = .get
@@ -60,13 +61,23 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	var decoder: HPACKDecoder { return session!.decoder }
 	let streamId: UInt32
 	var streamState = HTTP2StreamState.idle
-	var windowSize = Int.max
+	var windowSize = Int.max {
+		didSet {
+			windowSizeChanged?()
+		}
+	}
 	var endOfHeaders = false
+	var windowSizeChanged: (() -> ())? = nil
+	var debug: Bool { return session?.debug ?? false }
 	
 	init(_ streamId: UInt32, session: HTTP2Session) {
-		self.connection = NetTCP() // !FIX! should not be used with HTTP/2
-		self.session = session
+		self.connection = session.net
 		self.streamId = streamId
+		self.session = session
+	}
+	
+	deinit {
+		if debug { print("~HTTP2Request \(streamId)") }
 	}
 	
 	func headersFrame(_ frame: HTTP2Frame) {
@@ -140,7 +151,9 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	
 	func processRequest() {
 		let response = HTTP2Response(self)
-		routeRequest(response: response)
+		Threading.dispatch { // get off the frame read thread
+			self.routeRequest(response: response)
+		}
 	}
 	
 	func routeRequest(response: HTTPResponse) {
@@ -156,7 +169,6 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	// scheme, authority
 	func addHeader(name nam: [UInt8], value: [UInt8], sensitive: Bool) {
 		let n = UTF8Encoding.encode(bytes: nam)
-		print(n)
 		switch n {
 		case ":method":
 			method = HTTPMethod.from(string: UTF8Encoding.encode(bytes: value))
@@ -168,6 +180,9 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 			authority = UTF8Encoding.encode(bytes: value)
 		default:
 			headerStore[HTTPRequestHeader.Name.fromStandard(name: n)] = value
+		}
+		if debug {
+			print("\t\(n): \(UTF8Encoding.encode(bytes: value))")
 		}
 	}
 	
