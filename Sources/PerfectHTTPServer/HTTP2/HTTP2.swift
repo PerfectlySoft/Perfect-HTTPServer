@@ -17,12 +17,12 @@
 //===----------------------------------------------------------------------===//
 //
 
-let SETTINGS_HEADER_TABLE_SIZE: UInt16 = 0x1
-let SETTINGS_ENABLE_PUSH: UInt16 = 0x2
-let SETTINGS_MAX_CONCURRENT_STREAMS: UInt16 = 0x3
-let SETTINGS_INITIAL_WINDOW_SIZE: UInt16 = 0x4
-let SETTINGS_MAX_FRAME_SIZE: UInt16 = 0x5
-let SETTINGS_MAX_HEADER_LIST_SIZE: UInt16 = 0x6
+let settingsHeaderTableSize: UInt16 = 0x1
+let settingsEnablePush: UInt16 = 0x2
+let settingsMaxConcurrentStreams: UInt16 = 0x3
+let settingsInitialWindowSize: UInt16 = 0x4
+let settingsMaxFrameSize: UInt16 = 0x5
+let settingsMaxHeaderListSize: UInt16 = 0x6
 
 let http2ConnectionPreface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 

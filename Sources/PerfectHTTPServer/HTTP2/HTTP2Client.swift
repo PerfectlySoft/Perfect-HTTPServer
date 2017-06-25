@@ -125,18 +125,18 @@ open class HTTP2Client {
 			//			print("Setting \(identifier) \(value)")
 			
 			switch identifier {
-			case SETTINGS_HEADER_TABLE_SIZE:
-				()//self.encoder = HPACKEncoder(maxCapacity: Int(value))
-			case SETTINGS_ENABLE_PUSH:
-				()
-			case SETTINGS_MAX_CONCURRENT_STREAMS:
-				()
-			case SETTINGS_INITIAL_WINDOW_SIZE:
-				()
-			case SETTINGS_MAX_FRAME_SIZE:
-				()
-			case SETTINGS_MAX_HEADER_LIST_SIZE:
-				()
+//			case SETTINGS_HEADER_TABLE_SIZE:
+//				()//self.encoder = HPACKEncoder(maxCapacity: Int(value))
+//			case SETTINGS_ENABLE_PUSH:
+//				()
+//			case SETTINGS_MAX_CONCURRENT_STREAMS:
+//				()
+//			case SETTINGS_INITIAL_WINDOW_SIZE:
+//				()
+//			case SETTINGS_MAX_FRAME_SIZE:
+//				()
+//			case SETTINGS_MAX_HEADER_LIST_SIZE:
+//				()
 			default:
 				()
 			}

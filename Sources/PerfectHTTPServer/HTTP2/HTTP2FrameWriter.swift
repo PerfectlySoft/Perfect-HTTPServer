@@ -36,9 +36,13 @@ class HTTP2FrameWriter {
 		}
 	}
 	
-	func enqueueFrame(_ frame: HTTP2Frame) {
+	func enqueueFrame(_ frame: HTTP2Frame, highPriority: Bool = false) {
 		enqueuedFramesLock.lock()
-		enqueuedFrames.append(frame)
+		if highPriority {
+			enqueuedFrames.insert(frame, at: 0)
+		} else {
+			enqueuedFrames.append(frame)
+		}
 		enqueuedFramesLock.signal()
 		enqueuedFramesLock.unlock()
 	}

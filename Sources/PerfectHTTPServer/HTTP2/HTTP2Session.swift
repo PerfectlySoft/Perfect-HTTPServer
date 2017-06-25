@@ -210,7 +210,12 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	}
 	
 	func pingFrame(_ frame: HTTP2Frame) {
-		print("pingFrame")
+		guard frame.streamId == 0 else {
+			fatalError(error: .protocolError, msg: "Ping contained stream id")
+			return
+		}
+		let frame = HTTP2Frame(type: .ping, flags: flagPingAck, streamId: 0, payload: frame.payload)
+		frameWriter?.enqueueFrame(frame, highPriority: true)
 	}
 	
 	func goAwayFrame(_ frame: HTTP2Frame) {
@@ -230,21 +235,21 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			let identifier = b.export16Bits().netToHost
 			let value = Int(b.export32Bits().netToHost)
 			switch identifier {
-			case SETTINGS_HEADER_TABLE_SIZE:
+			case settingsHeaderTableSize:
 				settings.headerTableSize = Int(value)
 				decoder.setMaxHeaderTableSize(maxHeaderTableSize: Int(value))
-			case SETTINGS_ENABLE_PUSH:
+			case settingsEnablePush:
 				settings.enablePush = value == 1
-			case SETTINGS_MAX_CONCURRENT_STREAMS:
+			case settingsMaxConcurrentStreams:
 				settings.maxConcurrentStreams = value
-			case SETTINGS_INITIAL_WINDOW_SIZE:
+			case settingsInitialWindowSize:
 				settings.initialWindowSize = value
-			case SETTINGS_MAX_FRAME_SIZE:
+			case settingsMaxFrameSize:
 				settings.maxFrameSize = value
-			case SETTINGS_MAX_HEADER_LIST_SIZE:
+			case settingsMaxHeaderListSize:
 				settings.maxHeaderListSize = value
 			default:
-				()
+				() // must ignore unrecognized settings
 			}
 		}
 	}
