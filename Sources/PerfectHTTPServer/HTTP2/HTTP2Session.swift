@@ -38,7 +38,9 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	var hashValue: Int { return Int(net.fd.fd) }
 	
 	let net: NetTCP
-	let routeNavigator: RouteNavigator
+	let server: HTTPServer
+	var debug = false
+	
 	var frameReader: HTTP2FrameReader?
 	var frameWriter: HTTP2FrameWriter?
 	var settings = HTTP2SessionSettings()
@@ -49,11 +51,12 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	
 	private let streamsLock = Threading.Lock()
 	private var streams = [UInt32:HTTP2Request]()
-	var debug = false
 	
-	init(_ net: NetTCP, routeNavigator: RouteNavigator, debug: Bool = true) {
+	init(_ net: NetTCP,
+	     server: HTTPServer,
+	     debug: Bool = true) {
 		self.net = net
-		self.routeNavigator = routeNavigator
+		self.server = server
 		self.debug = debug
 		frameReader = HTTP2FrameReader(net, frameReceiver: self, errorDelegate: self)
 		frameWriter = HTTP2FrameWriter(net, errorDelegate: self)
@@ -193,6 +196,9 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		sid += UInt32(b[3])
 		sid &= ~0x80000000
 		let windowSize = Int(sid.netToHost)
+		guard windowSize > 0 else {
+			return fatalError(error: .protocolError, msg: "Received window size of zero")
+		}
 		if frame.streamId == 0 {
 			settings.initialWindowSize += windowSize
 			if debug {

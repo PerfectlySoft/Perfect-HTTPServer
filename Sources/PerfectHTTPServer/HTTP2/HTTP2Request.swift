@@ -30,10 +30,20 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	var pathComponents: [String] { return path.filePathComponents }
 	var queryParams: [(String, String)] = []
 	var protocolVersion = (2, 0)
-	var remoteAddress = (host: "", port: 0 as UInt16)
-	var serverAddress = (host: "", port: 0 as UInt16)
-	var serverName = ""
-	var documentRoot = ""
+	var remoteAddress: (host: String, port: UInt16) {
+		guard let remote = connection.remoteAddress else {
+			return ("", 0)
+		}
+		return (remote.host, remote.port)
+	}
+	var serverAddress: (host: String, port: UInt16) {
+		guard let local = connection.localAddress else {
+			return ("", 0)
+		}
+		return (local.host, local.port)
+	}
+	var serverName: String { return session?.server.serverName ?? "" }
+	var documentRoot: String { return session?.server.documentRoot ?? "./" }
 	var connection: NetTCP
 	var urlVariables: [String:String] = [:]
 	var scratchPad: [String:Any] = [:]
@@ -188,13 +198,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	}
 	
 	func routeRequest(response: HTTPResponse) {
-		if let nav = session?.routeNavigator, let handler = nav.findHandler(pathComponents: pathComponents, webRequest: self) {
-			handler(self, response)
-		} else {
-			response.status = .notFound
-			response.appendBody(string: "The file \(path) was not found.")
-			response.completed()
-		}
+		session?.server.filterAndRun(request: self, response: response)
 	}
 	
 	// scheme, authority
@@ -221,14 +225,6 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 		}
 		if debug {
 			print("\t\(n): \(UTF8Encoding.encode(bytes: value))")
-		}
-	}
-	
-	func streamFrameRead(_ frame: HTTP2Frame) {
-		if !endOfHeaders {
-//			guard frame.type == .continuation else {
-//				
-//			}
 		}
 	}
 }
