@@ -134,14 +134,16 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			switch frame.type {
 			case .headers:
 				headersFrame(frame)
+			case .continuation:
+				continuationFrame(frame)
+			case .data:
+				dataFrame(frame)
 			case .priority:
 				priorityFrame(frame)
 			case .cancelStream:
 				cancelStreamFrame(frame)
 			case .windowUpdate:
 				windowUpdateFrame(frame)
-			case .continuation:
-				continuationFrame(frame)
 			default:
 				fatalError(error: .protocolError, msg: "Invalid frame with stream id")
 			}
@@ -221,6 +223,14 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 			return fatalError(error: .streamClosed, msg: "Invalid stream id")
 		}
 		request.continuationFrame(frame)
+	}
+	
+	func dataFrame(_ frame: HTTP2Frame) {
+		let streamId = frame.streamId
+		guard let request = getRequest(streamId) else {
+			return fatalError(error: .streamClosed, msg: "Invalid stream id")
+		}
+		request.dataFrame(frame)
 	}
 	
 	func priorityFrame(_ frame: HTTP2Frame) {

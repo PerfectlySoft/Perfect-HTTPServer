@@ -72,6 +72,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	var endOfHeaders = false
 	var windowSizeChanged: (() -> ())? = nil
 	var debug: Bool { return session?.debug ?? false }
+	var mimes: MimeReader?
 	
 	init(_ streamId: UInt32, session: HTTP2Session) {
 		self.connection = session.net
@@ -147,6 +148,14 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 		}
 	}
 	
+	func dataFrame(_ frame: HTTP2Frame) {
+		putPostData(frame.payload ?? [])
+		let endOfStream = (frame.flags & flagEndStream) != 0
+		if endOfStream {
+			processRequest()
+		}
+	}
+	
 	func priorityFrame(_ frame: HTTP2Frame) {
 		
 	}
@@ -154,8 +163,21 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	func cancelStreamFrame(_ frame: HTTP2Frame) {
 		streamState = .closed
 	}
+	
 	func windowUpdate(_ size: Int) {
 		windowSize += size
+	}
+	
+	func putPostData(_ b: [UInt8]) {
+		if let mimes = self.mimes {
+			return mimes.addToBuffer(bytes: b)
+		} else {
+			if nil == postBodyBytes {
+				postBodyBytes = b
+			} else {
+				postBodyBytes?.append(contentsOf: b)
+			}
+		}
 	}
 	
 	func processRequest() {
@@ -176,11 +198,11 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	}
 	
 	// scheme, authority
-	func addHeader(name nam: [UInt8], value: [UInt8], sensitive: Bool) {
-		let n = UTF8Encoding.encode(bytes: nam)
+	func addHeader(name: [UInt8], value: [UInt8], sensitive: Bool) {
+		let n = String(validatingUTF8: name) ?? ""
 		switch n {
 		case ":method":
-			method = HTTPMethod.from(string: UTF8Encoding.encode(bytes: value))
+			method = HTTPMethod.from(string: String(validatingUTF8: value) ?? "")
 		case ":path":
 			path = UTF8Encoding.encode(bytes: value)
 		case ":scheme":
@@ -188,7 +210,14 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 		case ":authority":
 			authority = UTF8Encoding.encode(bytes: value)
 		default:
-			headerStore[HTTPRequestHeader.Name.fromStandard(name: n)] = value
+			let headerName = HTTPRequestHeader.Name.fromStandard(name: n)
+			if headerName == .contentType {
+				let contentType = String(validatingUTF8: value) ?? ""
+				if contentType.characters.starts(with: "multipart/form-data".characters) {
+					self.mimes = MimeReader(contentType)
+				}
+			}
+			headerStore[headerName] = value
 		}
 		if debug {
 			print("\t\(n): \(UTF8Encoding.encode(bytes: value))")
