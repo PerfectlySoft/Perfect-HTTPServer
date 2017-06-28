@@ -57,7 +57,7 @@ When building on Linux, OpenSSL 1.0.2+ is required for this package. On Ubuntu 1
 
 ### HTTP/2
 
-As of version 2.2.5, experimental HTTP/2 server support is available but is disabled by default. To enable HTTP/2, add "alpnSupport" to your server's TLSConfiguration struct:
+As of version 2.2.6, experimental HTTP/2 server support is available but is disabled by default. To enable HTTP/2, add "alpnSupport" to your server's TLSConfiguration struct:
 
 ```swift
 let securePort = 8181
