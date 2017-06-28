@@ -39,9 +39,9 @@
     </a>
 </p>
 
-HTTP 1.1 Server for Perfect
+HTTP/2, 1.1 Server for Perfect
 
-This repository contains the main HTTP 1.1 server as well as the beginnings of the HTTP 2.0 support for the project.
+This repository contains the main HTTP 1.1 &amp; HTTP/2 server.
 
 If you are using this server for your Perfect Server-Side Swift project then this will be the main dependency for your project.
 

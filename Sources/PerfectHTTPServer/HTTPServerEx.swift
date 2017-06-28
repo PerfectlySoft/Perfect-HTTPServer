@@ -35,15 +35,18 @@ public struct TLSConfiguration {
 	public let caCertPath: String?
 	public let certVerifyMode: OpenSSLVerifyMode?
 	public let cipherList: [String]
+	public let alpnSupport: [HTTPServer.ALPNSupport]
 	
 	public init(certPath: String, keyPath: String? = nil,
 	            caCertPath: String? = nil, certVerifyMode: OpenSSLVerifyMode? = nil,
-	            cipherList: [String] = TLSConfiguration.defaultCipherList) {
+	            cipherList: [String] = TLSConfiguration.defaultCipherList,
+	            alpnSupport: [HTTPServer.ALPNSupport] = [.http11]) {
 		self.certPath = certPath
 		self.keyPath = keyPath
 		self.caCertPath = caCertPath
 		self.certVerifyMode = certVerifyMode
 		self.cipherList = cipherList
+		self.alpnSupport = alpnSupport
 	}
 }
 
@@ -78,6 +81,7 @@ public extension HTTPServer {
 				http.caCert = tls.caCertPath
 				http.certVerifyMode = tls.certVerifyMode
 				http.cipherList = tls.cipherList
+				http.alpnSupport = tls.alpnSupport
 			}
 			return http
 		}
@@ -366,45 +370,4 @@ public extension HTTPServer {
 		return try launch(wait: wait, serversObjs)
 	}
 }
-/*
-func testingScratch() throws {
-	let port = 8080
-	
-	func handler(data: [String:Any]) throws -> RequestHandler {
-		return {
-			req, resp in
-			for _ in 0..<20 {
-				resp.appendBody(string: "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")
-			}
-			resp.completed()
-		}
-	}
-	
-	let confData = [
-		"servers": [
-			[
-				"name":"localhost",
-				"port":port,
-				"routes":[
-					["method":"get", "uri":"/test.html", "handler":handler],
-					["method":"get", "uri":"/    *     *", "handler":HTTPHandler.staticFiles,
-					 "documentRoot":"/Users/kjessup/development/PerfectNeu/PerfectTemplate/webroot",
-					 "allowResponseFilters":true]
-				],
-				"filters":[
-					[
-						"type":"response",
-						"priority":"high",
-						"name":PerfectHTTPServer.HTTPFilter.contentCompression,
-						]
-				]
-			]
-		]
-	]
-	do {
-		 try HTTPServer.launch(configurationData: confData)
-	} catch {
-		
-	}
-}
-*/
+

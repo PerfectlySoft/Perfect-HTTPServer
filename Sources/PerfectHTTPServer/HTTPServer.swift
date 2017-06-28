@@ -39,7 +39,6 @@ public class HTTPServer {
 	/// static files to be served from within.
 	public var documentRoot = "./webroot" { // Given a "safe" default
 		didSet {
-			// !FIX! add default route
 			do {
 				let dir = Dir(documentRoot)
 				if !dir.exists {
@@ -60,14 +59,12 @@ public class HTTPServer {
 	public var serverAddress = "0.0.0.0"
 	/// Switch to user after binding port
 	public var runAsUser: String?
-	
 	/// The canonical server name.
 	/// This is important if utilizing the `HTTPRequest.serverName` property.
 	public var serverName = ""
 	public var ssl: (sslCert: String, sslKey: String)?
 	public var caCert: String?
 	public var certVerifyMode: OpenSSLVerifyMode?
-	
 	public var cipherList = [
 		"ECDHE-ECDSA-AES256-GCM-SHA384",
 		"ECDHE-ECDSA-AES128-GCM-SHA256",
@@ -85,12 +82,17 @@ public class HTTPServer {
 		"ECDHE-RSA-AES256-SHA",
 		"ECDHE-ECDSA-AES256-SHA"]
 	
-	private var requestFilters = [[HTTPRequestFilter]]()
-	private var responseFilters = [[HTTPResponseFilter]]()
+	var requestFilters = [[HTTPRequestFilter]]()
+	var responseFilters = [[HTTPResponseFilter]]()
 	
 	/// Routing support
 	private var routes = Routes()
 	private var routeNavigator: RouteNavigator?
+	
+	public enum ALPNSupport: String {
+		case http11 = "http/1.1", http2 = "h2"
+	}
+	public var alpnSupport = [ALPNSupport.http11]
 	
 	/// Initialize the server object.
 	public init() {}
@@ -111,11 +113,17 @@ public class HTTPServer {
 	@discardableResult
 	public func setRequestFilters(_ request: [(HTTPRequestFilter, HTTPFilterPriority)]) -> HTTPServer {
 		let high = request.filter { $0.1 == HTTPFilterPriority.high }.map { $0.0 },
-		                                                                  med = request.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
-		                                                                                                                                 low = request.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
-		requestFilters.append(high)
-		requestFilters.append(med)
-		requestFilters.append(low)
+			med = request.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
+		    low = request.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
+		if !high.isEmpty {
+			requestFilters.append(high)
+		}
+		if !med.isEmpty {
+			requestFilters.append(med)
+		}
+		if !low.isEmpty {
+			requestFilters.append(low)
+		}
 		return self
 	}
 	
@@ -125,11 +133,17 @@ public class HTTPServer {
 	@discardableResult
 	public func setResponseFilters(_ response: [(HTTPResponseFilter, HTTPFilterPriority)]) -> HTTPServer {
 		let high = response.filter { $0.1 == HTTPFilterPriority.high }.map { $0.0 },
-		                                                                   med = response.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
-		                                                                                                                                   low = response.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
-		responseFilters.append(high)
-		responseFilters.append(med)
-		responseFilters.append(low)
+		    med = response.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
+		    low = response.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
+		if !high.isEmpty {
+			responseFilters.append(high)
+		}
+		if !med.isEmpty {
+			responseFilters.append(med)
+		}
+		if !low.isEmpty {
+			responseFilters.append(low)
+		}
 		return self
 	}
 	
@@ -177,6 +191,9 @@ public class HTTPServer {
 				let code = Int32(socket.errorCode())
 				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
 			}
+			
+			socket.enableALPN(protocols: self.alpnSupport.map { $0.rawValue })
+			
 			self.net = socket
 		} else {
 			let net = NetTCP()
@@ -238,10 +255,19 @@ public class HTTPServer {
 	}
 	
 	func handleConnection(_ net: NetTCP) {
-		#if os(Linux)
-			var flag = 1
-			_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
-		#endif
+		
+	#if os(Linux)
+		var flag = 1
+		_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
+	#endif
+		
+		if let netSSL = net as? NetTCPSSL, let neg = netSSL.alpnNegotiated, neg == ALPNSupport.http2.rawValue {
+			_ = HTTP2PrefaceValidator(net, timeoutSeconds: 5.0) {
+				_ = HTTP2Session(net, server: self)
+			}
+			return
+		}
+		
 		let req = HTTP11Request(connection: net)
 		req.serverName = self.serverName
 		req.readRequest { [weak self]
@@ -257,9 +283,6 @@ public class HTTPServer {
 	func runRequest(_ request: HTTP11Request) {
 		request.documentRoot = self.documentRoot
 		let net = request.connection
-		// !FIX! check for upgrade to http/2
-		// switch to HTTP2Request/HTTP2Response
-		
 		let response = HTTP11Response(request: request, filters: responseFilters.isEmpty ? nil : responseFilters.makeIterator())
 		if response.isKeepAlive {
 			response.completedCallback = { [weak self] in
@@ -284,6 +307,10 @@ public class HTTPServer {
 				}
 			}
 		}
+		filterAndRun(request: request, response: response)
+	}
+	
+	func filterAndRun(request: HTTPRequest, response: HTTPResponse) {
 		if requestFilters.isEmpty {
 			routeRequest(request, response: response)
 		} else {
@@ -321,7 +348,8 @@ public class HTTPServer {
 	}
 	
 	private func routeRequest(_ request: HTTPRequest, response: HTTPResponse) {
-		if let nav = routeNavigator, let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
+		if let nav = routeNavigator,
+				let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
 			handler(request, response)
 		} else {
 			response.status = .notFound

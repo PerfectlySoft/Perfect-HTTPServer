@@ -71,7 +71,12 @@ class HTTP11Request: HTTPRequest {
 		}
 		return (remote.host, remote.port)
 	}
-	var serverAddress = (host: "", port: 0 as UInt16)
+	var serverAddress: (host: String, port: UInt16) {
+		guard let local = connection.localAddress else {
+			return ("", 0)
+		}
+		return (local.host, local.port)
+	}
 	var serverName = ""
 	var documentRoot = "./webroot"
 	var urlVariables = [String:String]()
