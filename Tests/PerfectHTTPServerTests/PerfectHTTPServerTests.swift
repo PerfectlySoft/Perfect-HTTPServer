@@ -982,45 +982,6 @@ class PerfectHTTPServerTests: XCTestCase {
 		}
 	}
 	
-	func testHTTP2Server() {
-		
-		var secureRoutes = Routes()
-		secureRoutes.add(uri: "/**") {
-			request, response in
-			// Respond with a simple message.
-			response.setHeader(.custom(name: "X-Foo"), value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/603.2.4 (KHTML, like Gecko) Version/10.1.1 Safari/603.2.4")
-			response.setHeader(.contentType, value: "text/html")
-			response.appendBody(string: "<html><title>Hello, world!</title><body>")
-				.appendBody(string: request.headers.map { "\($0.0): \($0.1)" }.joined(separator: "<br>"))
-				
-				.appendBody(string: "<p>UPLOADS: \(request.postFileUploads)</p>")
-				
-				.appendBody(string: "<p>POST: \(request.postBodyString)</p>")
-				
-				.appendBody(string: "</body></html>")
-			// Ensure that response.completed() is called when your processing is done.
-			response.completed()
-		}
-		
-		let securePort = 8181
-		let tls = TLSConfiguration(certPath: "/Users/kjessup/new.cert.pem")
-		
-		do {
-			try HTTPServer.launch(
-				.secureServer(tls,
-				              name: "localhost",
-				              port: securePort,
-				              routes: secureRoutes))
-		} catch {
-			fatalError("Error thrown at top level \(error)")
-		}
-	}
-	
-/*
-	func testScratch() {
-		try! testingScratch()
-	}
-*/
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
         return [
 			("testHPACKEncode", testHPACKEncode),

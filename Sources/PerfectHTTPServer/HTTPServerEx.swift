@@ -35,12 +35,12 @@ public struct TLSConfiguration {
 	public let caCertPath: String?
 	public let certVerifyMode: OpenSSLVerifyMode?
 	public let cipherList: [String]
-	public let alpnSupport: [ALPNSupport]
+	public let alpnSupport: [HTTPServer.ALPNSupport]
 	
 	public init(certPath: String, keyPath: String? = nil,
 	            caCertPath: String? = nil, certVerifyMode: OpenSSLVerifyMode? = nil,
 	            cipherList: [String] = TLSConfiguration.defaultCipherList,
-	            alpnSupport: [ALPNSupport] = [ALPNSupport.http11]) {
+	            alpnSupport: [HTTPServer.ALPNSupport] = [.http11]) {
 		self.certPath = certPath
 		self.keyPath = keyPath
 		self.caCertPath = caCertPath
