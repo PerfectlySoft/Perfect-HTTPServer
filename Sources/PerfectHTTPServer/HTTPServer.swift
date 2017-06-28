@@ -92,7 +92,7 @@ public class HTTPServer {
 	public enum ALPNSupport: String {
 		case http11 = "http/1.1", http2 = "h2"
 	}
-	public var alpnSupport = [ALPNSupport.http2, ALPNSupport.http11]
+	public var alpnSupport = [ALPNSupport.http11]
 	
 	/// Initialize the server object.
 	public init() {}
