@@ -35,15 +35,18 @@ public struct TLSConfiguration {
 	public let caCertPath: String?
 	public let certVerifyMode: OpenSSLVerifyMode?
 	public let cipherList: [String]
+	public let alpnSupport: [ALPNSupport]
 	
 	public init(certPath: String, keyPath: String? = nil,
 	            caCertPath: String? = nil, certVerifyMode: OpenSSLVerifyMode? = nil,
-	            cipherList: [String] = TLSConfiguration.defaultCipherList) {
+	            cipherList: [String] = TLSConfiguration.defaultCipherList,
+	            alpnSupport: [ALPNSupport] = [ALPNSupport.http11]) {
 		self.certPath = certPath
 		self.keyPath = keyPath
 		self.caCertPath = caCertPath
 		self.certVerifyMode = certVerifyMode
 		self.cipherList = cipherList
+		self.alpnSupport = alpnSupport
 	}
 }
 
@@ -78,6 +81,7 @@ public extension HTTPServer {
 				http.caCert = tls.caCertPath
 				http.certVerifyMode = tls.certVerifyMode
 				http.cipherList = tls.cipherList
+				http.alpnSupport = tls.alpnSupport
 			}
 			return http
 		}

@@ -258,21 +258,7 @@ open class HTTP2Client {
 				if let net = n as? NetTCPSSL {
 					net.fd.switchToNonBlocking()
 					net.fd.switchToBlocking() // !FIX!
-					
-					if ssl {
-						net.beginSSL {
-							b in
-							
-							if b {
-								self.completeConnect(callback)
-							} else {
-								callback(false)
-							}
-						}
-					} else {
-						self.completeConnect(callback)
-					}
-					
+					self.completeConnect(callback)
 				} else {
 					callback(false)
 				}
