@@ -149,11 +149,6 @@ final class HTTP2Response: HTTPResponse {
 		guard final || !inBodyBytes.isEmpty else {
 			return callback(true)
 		}
-		if final {
-			// !FIX! this needs an API change for response filters to let them know
-			// when a call is the last
-			request.scratchPad["_flushing_"] = true
-		}
 		let sendBytes: [UInt8] // actually sending in this frame
 		let remainingBodyBytes: [UInt8] // left over to send next frame
 		let moreToCome: Bool
@@ -184,7 +179,7 @@ final class HTTP2Response: HTTPResponse {
 		}
 		session?.decreaseClientWindow(stream: streamId, by: sendBytes.count)
 		if debug {
-			print("response \(streamId) body bytes: \(sendBytes.count), remaining: \(remainingBodyBytes.count), send window: \(h2Request.streamFlowWindows.clientWindowSize)")
+			print("response \(streamId) body bytes: \(sendBytes.count), remaining: \(remainingBodyBytes.count), send window: \(h2Request.streamFlowWindows.clientWindowSize), \(session!.connectionFlowWindows.clientWindowSize)")
 		}
 		var frame = HTTP2Frame(type: .data,
 		                       flags: (!moreToCome && final) ? flagEndStream : 0,
@@ -193,9 +188,11 @@ final class HTTP2Response: HTTPResponse {
 		if !moreToCome {
 			frame.sentCallback = {
 				ok in
-				callback(ok)
-				if !ok {
-					self.removeRequest()
+				Threading.dispatch {
+					callback(ok)
+					if !ok {
+						self.removeRequest()
+					}
 				}
 			}
 		}
@@ -211,6 +208,11 @@ final class HTTP2Response: HTTPResponse {
 			guard ok else {
 				self.removeRequest()
 				return callback(false)
+			}
+			if final {
+				// !FIX! this needs an API change for response filters to let them know
+				// when a call is the last
+				self.request.scratchPad["_flushing_"] = true
 			}
 			self.filteredBodyBytes {
 				bytes in

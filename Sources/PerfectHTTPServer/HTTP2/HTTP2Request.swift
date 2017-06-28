@@ -240,7 +240,10 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	
 	func cancelStreamFrame(_ frame: HTTP2Frame) {
 		streamState = .closed
-		unblockCallback?()
+		if let u = unblockCallback {
+			unblockCallback = nil
+			u()
+		}
 	}
 	
 	func putPostData(_ b: [UInt8]) {

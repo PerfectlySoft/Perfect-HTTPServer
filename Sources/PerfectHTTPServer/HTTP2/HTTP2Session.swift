@@ -138,6 +138,28 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		}
 	}
 	
+	func networkShutdown() {
+		net.shutdown()
+		unpinSelf()
+	}
+	
+	func fatalError(streamId: UInt32 = 0, error: HTTP2Error, msg: String) {
+		if streamId != 0 {
+			removeRequest(streamId)
+		}
+		let bytes = Bytes()
+		bytes.importFrame32(UInt32(streamId))
+			.importFrame32(error.rawValue)
+			.importBytes(from: Array(msg.utf8))
+		let frame = HTTP2Frame(type: .goAway, payload: bytes.data)
+		frameWriter?.enqueueFrame(frame)
+		frameWriter?.waitUntilEmpty {
+			self.networkShutdown()
+		}
+	}
+}
+
+extension HTTP2Session {
 	func getRequest(_ streamId: UInt32) -> HTTP2Request? {
 		streamsLock.lock()
 		defer {
@@ -161,31 +183,6 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		}
 		streams.removeValue(forKey: streamId)
 	}
-	
-	func networkShutdown() {
-		net.shutdown()
-		unpinSelf()
-	}
-	
-	func fatalError(streamId: UInt32 = 0, error: HTTP2Error, msg: String) {
-		if streamId != 0 {
-			removeRequest(streamId)
-		}
-		let bytes = Bytes()
-		bytes.importFrame32(UInt32(streamId))
-			.importFrame32(error.rawValue)
-			.importBytes(from: Array(msg.utf8))
-		let frame = HTTP2Frame(type: .goAway, payload: bytes.data)
-		frameWriter?.enqueueFrame(frame)
-		frameWriter?.waitUntilEmpty {
-			self.networkShutdown()
-		}
-	}
-}
-
-extension HTTP2Session {
-	
-	
 }
 
 extension HTTP2Session {
@@ -240,6 +237,7 @@ extension HTTP2Session {
 			                          flags: flagSettingsAck)
 			frameWriter?.enqueueFrame(response)
 		} else {
+			print("\tack")
 			increaseServerConnectionWindow(by: receiveWindowTopOff)
 		}
 	}
@@ -248,15 +246,17 @@ extension HTTP2Session {
 		guard let b = frame.payload, b.count == 4 else {
 			return fatalError(error: .protocolError, msg: "Invalid frame")
 		}
-		var sid: UInt32 = UInt32(b[0])
-		sid <<= 8
-		sid += UInt32(b[1])
-		sid <<= 8
-		sid += UInt32(b[2])
-		sid <<= 8
-		sid += UInt32(b[3])
-		sid &= ~0x80000000
-		let windowSize = Int(sid.netToHost)
+		let bytes = Bytes(existingBytes: b)
+		let windowSize = Int(bytes.export32Bits().netToHost)
+//		var sid: UInt32 = UInt32(b[0])
+//		sid <<= 8
+//		sid += UInt32(b[1])
+//		sid <<= 8
+//		sid += UInt32(b[2])
+//		sid <<= 8
+//		sid += UInt32(b[3])
+//		sid &= ~0x80000000
+//		let windowSize = Int(sid.netToHost)
 		guard windowSize > 0 else {
 			return fatalError(error: .protocolError, msg: "Received window size of zero")
 		}
@@ -311,7 +311,7 @@ extension HTTP2Session {
 	func cancelStreamFrame(_ frame: HTTP2Frame) {
 		let streamId = frame.streamId
 		guard let request = getRequest(streamId) else {
-			return fatalError(error: .streamClosed, msg: "Invalid stream id")
+			return //fatalError(error: .streamClosed, msg: "Invalid stream id")
 		}
 		request.cancelStreamFrame(frame)
 		if debug {
@@ -363,7 +363,13 @@ extension HTTP2Session {
 		defer {
 			streamsLock.unlock()
 		}
-		streams.forEach { $0.value.unblockCallback?() }
+		streams.forEach {
+			tup in
+			if let u = tup.value.unblockCallback {
+				tup.value.unblockCallback = nil
+				u()
+			}
+		}
 	}
 	
 	// received a WINDOW_UPDATE for stream x
@@ -372,7 +378,10 @@ extension HTTP2Session {
 			return
 		}
 		request.streamFlowWindows.clientWindowSize += by
-		request.unblockCallback?()
+		if let u = request.unblockCallback {
+			request.unblockCallback = nil
+			u()
+		}
 		if debug {
 			print("\t+\(by) for stream \(stream) = \(request.streamFlowWindows.clientWindowSize)")
 		}
