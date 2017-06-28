@@ -39,7 +39,7 @@
     </a>
 </p>
 
-HTTP/2, 1.1 Server for Perfect
+HTTP Server for Perfect
 
 This repository contains the main HTTP 1.1 &amp; HTTP/2 server.
 
@@ -54,6 +54,26 @@ If you are starting out with Perfect look at the main [Perfect](https://github.c
 If you are beginning a new project with Perfect look at the [PerfectTemplate](https://github.com/PerfectlySoft/PerfectTemplate) project for starter instructions.
 
 When building on Linux, OpenSSL 1.0.2+ is required for this package. On Ubuntu 14 or some Debian distributions you will need to update your OpenSSL before this package will build.
+
+### HTTP/2
+
+As of version 2.2.5, experimental HTTP/2 server support is available but is disabled by default. To enable HTTP/2, add "alpnSupport" to your server's TLSConfiguration struct:
+
+```swift
+let securePort = 8181
+let tls = TLSConfiguration(certPath: "my.cert.pem", 
+						alpnSupport: [.http2, .http11])
+
+try HTTPServer.launch(
+	.secureServer(tls,
+	              name: "servername",
+	              port: securePort,
+	              routes: secureRoutes))
+```
+
+This will enable HTTP/2 to be used over secure connections if the client supports it. If the client does not support HTTP/2 then the server will use HTTP 1.x. HTTP/2 support is only offered over secure connections. The HTTP/2 server will print much debugging information to the console while in use.
+
+Please contact us if you experience any problems or incompatibilities while experimenting with HTTP/2 support.
 
 ## QuickStart
 
