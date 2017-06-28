@@ -370,45 +370,4 @@ public extension HTTPServer {
 		return try launch(wait: wait, serversObjs)
 	}
 }
-/*
-func testingScratch() throws {
-	let port = 8080
-	
-	func handler(data: [String:Any]) throws -> RequestHandler {
-		return {
-			req, resp in
-			for _ in 0..<20 {
-				resp.appendBody(string: "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")
-			}
-			resp.completed()
-		}
-	}
-	
-	let confData = [
-		"servers": [
-			[
-				"name":"localhost",
-				"port":port,
-				"routes":[
-					["method":"get", "uri":"/test.html", "handler":handler],
-					["method":"get", "uri":"/    *     *", "handler":HTTPHandler.staticFiles,
-					 "documentRoot":"/Users/kjessup/development/PerfectNeu/PerfectTemplate/webroot",
-					 "allowResponseFilters":true]
-				],
-				"filters":[
-					[
-						"type":"response",
-						"priority":"high",
-						"name":PerfectHTTPServer.HTTPFilter.contentCompression,
-						]
-				]
-			]
-		]
-	]
-	do {
-		 try HTTPServer.launch(configurationData: confData)
-	} catch {
-		
-	}
-}
-*/
+

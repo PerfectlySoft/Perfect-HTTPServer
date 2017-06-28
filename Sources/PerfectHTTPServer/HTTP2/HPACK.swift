@@ -754,11 +754,11 @@ final class HPACKEncoder {
 	
 	static let bucketSize = 17
 	static let empty = [UInt8]()
-	static let INDEX_MAX = 2147483647
-	static let INDEX_MIN = -2147483648
+	static let indexMax = 2147483647
+	static let indexMin = -2147483648
 	
 	var headerFields: [HeaderEntry?]
-	var head = HeaderEntry(hash: -1, name: empty, value: empty, index: INDEX_MAX, next: nil)
+	var head = HeaderEntry(hash: -1, name: empty, value: empty, index: indexMax, next: nil)
 	var size = 0
 	var capacity = 0
 	
@@ -859,8 +859,8 @@ final class HPACKEncoder {
 		if h > 0 {
 			return h
 		}
-		if h == HPACKEncoder.INDEX_MIN {
-			return HPACKEncoder.INDEX_MAX
+		if h == HPACKEncoder.indexMin {
+			return HPACKEncoder.indexMax
 		}
 		return -h
 	}
@@ -1291,7 +1291,7 @@ final class HPACKDecoder {
 				if maxSize == -1 {
 					return
 				}
-				if maxSize > HPACKEncoder.INDEX_MAX - index {
+				if maxSize > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				setDynamicTableSize(index + maxSize)
@@ -1302,7 +1302,7 @@ final class HPACKDecoder {
 				if headerIndex == -1 {
 					return
 				}
-				if headerIndex > HPACKEncoder.INDEX_MAX - index {
+				if headerIndex > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				try indexHeader(index + headerIndex, headerListener: headerListener)
@@ -1313,7 +1313,7 @@ final class HPACKDecoder {
 				if nameIndex == -1 {
 					return
 				}
-				if nameIndex > HPACKEncoder.INDEX_MAX - index {
+				if nameIndex > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				try readName(index + nameIndex)
@@ -1355,7 +1355,7 @@ final class HPACKDecoder {
 				if nameLength == -1 {
 					return
 				}
-				if nameLength > HPACKEncoder.INDEX_MAX - index {
+				if nameLength > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				nameLength += index
@@ -1431,7 +1431,7 @@ final class HPACKDecoder {
 				if valueLength == -1 {
 					return
 				}
-				if valueLength > HPACKEncoder.INDEX_MAX - index {
+				if valueLength > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				valueLength += index

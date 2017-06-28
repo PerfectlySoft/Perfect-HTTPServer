@@ -47,6 +47,8 @@ struct HTTP2Frame {
 	let flags: UInt8
 	let streamId: UInt32 // 31-bit
 	var payload: [UInt8]?
+	var sentCallback: ((Bool) -> ())? = nil
+	var willSendCallback: (() -> ())? = nil
 	
 	// Deprecate this
 	init(length: UInt32,

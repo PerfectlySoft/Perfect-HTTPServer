@@ -82,8 +82,8 @@ public class HTTPServer {
 		"ECDHE-RSA-AES256-SHA",
 		"ECDHE-ECDSA-AES256-SHA"]
 	
-	private var requestFilters = [[HTTPRequestFilter]]()
-	private var responseFilters = [[HTTPResponseFilter]]()
+	var requestFilters = [[HTTPRequestFilter]]()
+	var responseFilters = [[HTTPResponseFilter]]()
 	
 	/// Routing support
 	private var routes = Routes()
@@ -115,9 +115,15 @@ public class HTTPServer {
 		let high = request.filter { $0.1 == HTTPFilterPriority.high }.map { $0.0 },
 			med = request.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
 		    low = request.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
-		requestFilters.append(high)
-		requestFilters.append(med)
-		requestFilters.append(low)
+		if !high.isEmpty {
+			requestFilters.append(high)
+		}
+		if !med.isEmpty {
+			requestFilters.append(med)
+		}
+		if !low.isEmpty {
+			requestFilters.append(low)
+		}
 		return self
 	}
 	
@@ -129,9 +135,15 @@ public class HTTPServer {
 		let high = response.filter { $0.1 == HTTPFilterPriority.high }.map { $0.0 },
 		    med = response.filter { $0.1 == HTTPFilterPriority.medium }.map { $0.0 },
 		    low = response.filter { $0.1 == HTTPFilterPriority.low }.map { $0.0 }
-		responseFilters.append(high)
-		responseFilters.append(med)
-		responseFilters.append(low)
+		if !high.isEmpty {
+			responseFilters.append(high)
+		}
+		if !med.isEmpty {
+			responseFilters.append(med)
+		}
+		if !low.isEmpty {
+			responseFilters.append(low)
+		}
 		return self
 	}
 	
@@ -251,7 +263,7 @@ public class HTTPServer {
 		
 		if let netSSL = net as? NetTCPSSL, let neg = netSSL.alpnNegotiated, neg == ALPNSupport.http2.rawValue {
 			_ = HTTP2PrefaceValidator(net, timeoutSeconds: 5.0) {
-				_ = HTTP2Session(net, routeNavigator: self.routeNavigator!)
+				_ = HTTP2Session(net, server: self)
 			}
 			return
 		}
@@ -295,6 +307,10 @@ public class HTTPServer {
 				}
 			}
 		}
+		filterAndRun(request: request, response: response)
+	}
+	
+	func filterAndRun(request: HTTPRequest, response: HTTPResponse) {
 		if requestFilters.isEmpty {
 			routeRequest(request, response: response)
 		} else {
@@ -332,7 +348,8 @@ public class HTTPServer {
 	}
 	
 	private func routeRequest(_ request: HTTPRequest, response: HTTPResponse) {
-		if let nav = routeNavigator, let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
+		if let nav = routeNavigator,
+				let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
 			handler(request, response)
 		} else {
 			response.status = .notFound
