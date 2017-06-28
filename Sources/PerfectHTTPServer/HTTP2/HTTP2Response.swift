@@ -193,8 +193,10 @@ final class HTTP2Response: HTTPResponse {
 		if !moreToCome {
 			frame.sentCallback = {
 				ok in
-				guard ok else { return self.removeRequest() }
 				callback(ok)
+				if !ok {
+					self.removeRequest()
+				}
 			}
 		}
 		frameWriter?.enqueueFrame(frame)

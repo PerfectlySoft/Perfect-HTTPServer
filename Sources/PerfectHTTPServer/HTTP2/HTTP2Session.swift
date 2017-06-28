@@ -335,7 +335,7 @@ extension HTTP2Session {
 			let errorCode = b.export32Bits().netToHost
 			let remainingBytes = b.exportBytes(count: b.availableExportBytes)
 			let errorStr = String(validatingUTF8: remainingBytes)
-			print("\(lastStreamId) \(String(describing: HTTP2Error(rawValue: errorCode))) \(String(describing: errorStr))")
+			print("Bye: last stream: \(lastStreamId) \(HTTP2Error(rawValue: errorCode)?.rawValue ?? 0) \(errorStr ?? "")")
 		}
 		networkShutdown()
 	}
