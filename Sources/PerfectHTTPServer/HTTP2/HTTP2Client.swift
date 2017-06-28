@@ -29,106 +29,12 @@ import PerfectHTTP
 import SwiftGlibc
 #endif
 
-let HTTP2_DATA: UInt8 = 0x0
-let HTTP2_HEADERS: UInt8 = 0x1
-let HTTP2_PRIORITY: UInt8 = 0x2
-let HTTP2_RST_STREAM: UInt8 = 0x3
-let HTTP2_SETTINGS: UInt8 = 0x4
-let HTTP2_PUSH_PROMISE: UInt8 = 0x5
-let HTTP2_PING: UInt8 = 0x6
-let HTTP2_GOAWAY: UInt8 = 0x7
-let HTTP2_WINDOW_UPDATE: UInt8 = 0x8
-let HTTP2_CONTINUATION: UInt8 = 0x9
-
-let HTTP2_END_STREAM: UInt8 = 0x1
-let HTTP2_END_HEADERS: UInt8 = 0x4
-let HTTP2_PADDED: UInt8 = 0x8
-let HTTP2_FLAG_PRIORITY: UInt8 = 0x20
-let HTTP2_SETTINGS_ACK = HTTP2_END_STREAM
-let HTTP2_PING_ACK = HTTP2_END_STREAM
-
-let SETTINGS_HEADER_TABLE_SIZE: UInt16 = 0x1
-let SETTINGS_ENABLE_PUSH: UInt16 = 0x2
-let SETTINGS_MAX_CONCURRENT_STREAMS: UInt16 = 0x3
-let SETTINGS_INITIAL_WINDOW_SIZE: UInt16 = 0x4
-let SETTINGS_MAX_FRAME_SIZE: UInt16 = 0x5
-let SETTINGS_MAX_HEADER_LIST_SIZE: UInt16 = 0x6
-
-struct HTTP2Frame {
-	let length: UInt32 // 24-bit
-	let type: UInt8
-	let flags: UInt8
-	let streamId: UInt32 // 31-bit
-	var payload: [UInt8]?
-
-	var typeStr: String {
-		switch self.type {
-		case HTTP2_DATA:
-			return "HTTP2_DATA"
-		case HTTP2_HEADERS:
-			return "HTTP2_HEADERS"
-		case HTTP2_PRIORITY:
-			return "HTTP2_PRIORITY"
-		case HTTP2_RST_STREAM:
-			return "HTTP2_RST_STREAM"
-		case HTTP2_SETTINGS:
-			return "HTTP2_SETTINGS"
-		case HTTP2_PUSH_PROMISE:
-			return "HTTP2_PUSH_PROMISE"
-		case HTTP2_PING:
-			return "HTTP2_PING"
-		case HTTP2_GOAWAY:
-			return "HTTP2_GOAWAY"
-		case HTTP2_WINDOW_UPDATE:
-			return "HTTP2_WINDOW_UPDATE"
-		case HTTP2_CONTINUATION:
-			return "HTTP2_CONTINUATION"
-		default:
-			return "UNKNOWN_TYPE"
-		}
-	}
+private class HTTP2ClientRequest: HTTP11Request {
 	
-	var flagsStr: String {
-		var s = ""
-		if flags == 0 {
-			s.append("NO FLAGS")
-		}
-		if (flags & HTTP2_END_STREAM) != 0 {
-			s.append(" +HTTP2_END_STREAM")
-		}
-		if (flags & HTTP2_END_HEADERS) != 0 {
-			s.append(" +HTTP2_END_HEADERS")
-		}
-		return s
-	}
-	
-	func headerBytes() -> [UInt8] {
-		var data = [UInt8]()
-
-		let l = length.hostToNet >> 8
-		data.append(UInt8(l & 0xFF))
-		data.append(UInt8((l >> 8) & 0xFF))
-		data.append(UInt8((l >> 16) & 0xFF))
-
-		data.append(type)
-		data.append(flags)
-
-		let s = streamId.hostToNet
-		data.append(UInt8(s & 0xFF))
-		data.append(UInt8((s >> 8) & 0xFF))
-		data.append(UInt8((s >> 16) & 0xFF))
-		data.append(UInt8((s >> 24) & 0xFF))
-		return data
-	}
 }
 
-final class HTTP2Request: HTTP11Request {
-
-    
-}
-
-final class HTTP2Response: HTTP11Response, HeaderListener {
-
+final class HTTP2ClientResponse: HTTP11Response, HeaderListener {
+	
 	func addHeader(name nam: [UInt8], value: [UInt8], sensitive: Bool) {
 		let n = UTF8Encoding.encode(bytes: nam)
 		let v = UTF8Encoding.encode(bytes: value)
@@ -142,11 +48,11 @@ final class HTTP2Response: HTTP11Response, HeaderListener {
 }
 
 open class HTTP2Client {
-
+	
 	enum StreamState {
 		case none, idle, reservedLocal, reservedRemote, open, halfClosedRemote, halfClosedLocal, closed
 	}
-
+	
 	public let net = NetTCPSSL()
 	var host = ""
 	var timeoutSeconds = 10.0
@@ -162,21 +68,21 @@ open class HTTP2Client {
 	let frameReadEvent = Threading.Event()
 	var frameQueue = [HTTP2Frame]()
 	var frameReadOK = false
-
+	
 	var newStreamId: UInt32 {
 		streams[streamCounter] = StreamState.none
 		let s = streamCounter
 		streamCounter += 2
 		return s
 	}
-
+	
 	public init() {
 		
 	}
-
+	
 	func dequeueFrame(timeoutSeconds timeout: Double) -> HTTP2Frame? {
 		var frame: HTTP2Frame? = nil
-
+		
 		self.frameReadEvent.doWithLock {
 			if self.frameQueue.count == 0 {
 				let _ = self.frameReadEvent.wait(seconds: timeout)
@@ -185,13 +91,13 @@ open class HTTP2Client {
 				frame = self.frameQueue.removeFirst()
 			}
 		}
-
+		
 		return frame
 	}
-
+	
 	func dequeueFrame(timeoutSeconds timeout: Double, streamId: UInt32) -> HTTP2Frame? {
 		var frame: HTTP2Frame? = nil
-
+		
 		self.frameReadEvent.doWithLock {
 			if self.frameQueue.count == 0 {
 				let _ = self.frameReadEvent.wait(seconds: timeout)
@@ -199,7 +105,7 @@ open class HTTP2Client {
 			if self.frameQueue.count > 0 {
 				for i in 0..<self.frameQueue.count {
 					let frameTest = self.frameQueue[i]
-					if frameTest.streamId == streamId || frameTest.type == HTTP2_GOAWAY {
+					if frameTest.streamId == streamId || frameTest.type == .goAway {
 						self.frameQueue.remove(at: i)
 						frame = frameTest
 						break
@@ -207,54 +113,58 @@ open class HTTP2Client {
 				}
 			}
 		}
-
+		
 		return frame
 	}
-
+	
 	func processSettingsPayload(_ b: Bytes) {
 		while b.availableExportBytes >= 6 {
 			let identifier = b.export16Bits().netToHost
-//			let value = b.export32Bits().netToHost
-
-//			print("Setting \(identifier) \(value)")
+			//			let value = b.export32Bits().netToHost
+			
+			//			print("Setting \(identifier) \(value)")
 			
 			switch identifier {
-			case SETTINGS_HEADER_TABLE_SIZE:
-				()//self.encoder = HPACKEncoder(maxCapacity: Int(value))
-			case SETTINGS_ENABLE_PUSH:
-				()
-			case SETTINGS_MAX_CONCURRENT_STREAMS:
-				()
-			case SETTINGS_INITIAL_WINDOW_SIZE:
-				()
-			case SETTINGS_MAX_FRAME_SIZE:
-				()
-			case SETTINGS_MAX_HEADER_LIST_SIZE:
-				()
+//			case SETTINGS_HEADER_TABLE_SIZE:
+//				()//self.encoder = HPACKEncoder(maxCapacity: Int(value))
+//			case SETTINGS_ENABLE_PUSH:
+//				()
+//			case SETTINGS_MAX_CONCURRENT_STREAMS:
+//				()
+//			case SETTINGS_INITIAL_WINDOW_SIZE:
+//				()
+//			case SETTINGS_MAX_FRAME_SIZE:
+//				()
+//			case SETTINGS_MAX_HEADER_LIST_SIZE:
+//				()
 			default:
 				()
 			}
 		}
 	}
-
+	
 	func readOneFrame() {
 		Threading.dispatch {
 			self.readHTTP2Frame(timeout: -1) { [weak self]
 				f in
 				if let frame = f {
-//					print("Read frame \(frame.typeStr) \(frame.flagsStr) \(frame.streamId)")
-//					if frame.length > 0 {
-//						print("Read frame payload \(frame.length) \(UTF8Encoding.encode(bytes: frame.payload!))")
-//					}
+					//					print("Read frame \(frame.typeStr) \(frame.flagsStr) \(frame.streamId)")
+					//					if frame.length > 0 {
+					//						print("Read frame payload \(frame.length) \(UTF8Encoding.encode(bytes: frame.payload!))")
+					//					}
 					self?.frameReadEvent.doWithLock {
 						switch frame.type {
-						case HTTP2_SETTINGS:
-							let endStream = (frame.flags & HTTP2_SETTINGS_ACK) != 0
+						case .settings:
+							let endStream = (frame.flags & flagSettingsAck) != 0
 							if !endStream { // ACK settings receipt
 								if let payload = frame.payload {
 									self?.processSettingsPayload(Bytes(existingBytes: payload))
 								}
-								let response = HTTP2Frame(length: 0, type: HTTP2_SETTINGS, flags: HTTP2_SETTINGS_ACK, streamId: 0, payload: nil)
+								let response = HTTP2Frame(length: 0,
+								                          type: HTTP2FrameType.settings.rawValue,
+								                          flags: flagSettingsAck,
+								                          streamId: 0,
+								                          payload: nil)
 								self?.writeHTTP2Frame(response) {
 									b in
 									self?.readOneFrame()
@@ -262,13 +172,17 @@ open class HTTP2Client {
 							} else { // ACK of our settings frame
 								self?.readOneFrame()
 							}
-						case HTTP2_PING:
-							let endStream = (frame.flags & HTTP2_PING_ACK) != 0
+						case .ping:
+							let endStream = (frame.flags & flagPingAck) != 0
 							if !endStream { // ACK ping receipt
 								if let payload = frame.payload {
 									self?.processSettingsPayload(Bytes(existingBytes: payload))
 								}
-								let response = HTTP2Frame(length: frame.length, type: HTTP2_PING, flags: HTTP2_PING_ACK, streamId: 0, payload: frame.payload)
+								let response = HTTP2Frame(length: frame.length,
+								                          type: HTTP2FrameType.ping.rawValue,
+								                          flags: flagPingAck,
+								                          streamId: 0,
+								                          payload: frame.payload)
 								self?.writeHTTP2Frame(response) {
 									b in
 									self?.readOneFrame()
@@ -292,51 +206,51 @@ open class HTTP2Client {
 			}
 		}
 	}
-
+	
 	func startReadThread() {
 		Threading.dispatch { [weak self] in
 			// dbg
 			defer {
 				print("~HTTP2Client.startReadThread")
 			}
-            guard let net = self?.net else {
-                return
-            }
-            while net.isValid {
-                guard let s = self else {
-                    net.close()
-                    break
-                }
-                s.frameReadEvent.doWithLock {
-                    s.frameReadOK = false
-                    s.readOneFrame()
-                    if !s.frameReadOK && net.isValid {
-                        _ = s.frameReadEvent.wait()
-                    }
-                }
-                if !s.frameReadOK {
-                    s.close()
-                    break
-                }
-            }
+			guard let net = self?.net else {
+				return
+			}
+			while net.isValid {
+				guard let s = self else {
+					net.close()
+					break
+				}
+				s.frameReadEvent.doWithLock {
+					s.frameReadOK = false
+					s.readOneFrame()
+					if !s.frameReadOK && net.isValid {
+						_ = s.frameReadEvent.wait()
+					}
+				}
+				if !s.frameReadOK {
+					s.close()
+					break
+				}
+			}
 		}
 	}
-
+	
 	public func close() {
 		self.closeLock.doWithLock {
 			self.net.shutdown()
 		}
 	}
-
+	
 	public var isConnected: Bool {
 		return self.net.isValid
 	}
-
+	
 	public func connect(host hst: String, port: UInt16, ssl: Bool, timeoutSeconds: Double, callback: @escaping (Bool) -> ()) {
 		self.host = hst
 		self.ssl = ssl
 		self.timeoutSeconds = timeoutSeconds
-
+		
 		do {
 			try net.connect(address: hst, port: port, timeoutSeconds: timeoutSeconds) {
 				n in
@@ -344,21 +258,7 @@ open class HTTP2Client {
 				if let net = n as? NetTCPSSL {
 					net.fd.switchToNonBlocking()
 					net.fd.switchToBlocking() // !FIX!
-
-					if ssl {
-						net.beginSSL {
-							b in
-
-							if b {
-								self.completeConnect(callback)
-							} else {
-								callback(false)
-							}
-						}
-					} else {
-						self.completeConnect(callback)
-					}
-
+					self.completeConnect(callback)
 				} else {
 					callback(false)
 				}
@@ -367,21 +267,21 @@ open class HTTP2Client {
 			callback(false)
 		}
 	}
-
+	
 	public func createRequest() -> HTTPRequest {
-		return HTTP2Request(connection: self.net)
+		return HTTP2ClientRequest(connection: self.net)
 	}
-
+	
 	func awaitResponse(streamId stream: UInt32, request: HTTPRequest, callback: (HTTPResponse?, String?) -> ()) {
-        let response = HTTP2Response(request: request)
+		let response = HTTP2ClientResponse(request: request)
 		var streamOpen = true
 		while streamOpen {
 			let f = self.dequeueFrame(timeoutSeconds: self.timeoutSeconds, streamId: stream)
-
+			
 			if let frame = f {
-
+				
 				switch frame.type {
-				case HTTP2_GOAWAY:
+				case .goAway:
 					let bytes = Bytes(existingBytes: frame.payload!)
 					let streamId = bytes.export32Bits().netToHost
 					let errorCode = bytes.export32Bits().netToHost
@@ -392,44 +292,48 @@ open class HTTP2Client {
 					
 					let bytes2 = Bytes()
 					let _ = bytes2.import32Bits(from: streamId.hostToNet)
-                            .import32Bits(from: 0)
-					let frame2 = HTTP2Frame(length: 8, type: HTTP2_GOAWAY, flags: 0, streamId: streamId, payload: bytes2.data)
+						.import32Bits(from: 0)
+					let frame2 = HTTP2Frame(length: 8,
+					                        type: HTTP2FrameType.goAway.rawValue,
+					                        flags: 0,
+					                        streamId: streamId,
+					                        payload: bytes2.data)
 					self.writeHTTP2Frame(frame2) {
 						b in
-
+						
 						self.close()
 					}
 					streamOpen = false
 					callback(nil, "\(errorCode) \(message)")
-				case HTTP2_HEADERS:
-					let padded = (frame.flags & HTTP2_PADDED) != 0
-//					let priority = (frame.flags & HTTP2_PRIORITY) != 0
-//					let end = (frame.flags & HTTP2_END_HEADERS) != 0
-
+				case .headers:
+					let padded = (frame.flags & flagPadded) != 0
+					//					let priority = (frame.flags & HTTP2_PRIORITY) != 0
+					//					let end = (frame.flags & HTTP2_END_HEADERS) != 0
+					
 					if let ba = frame.payload, ba.count > 0 {
 						let bytes = Bytes(existingBytes: ba)
 						var padLength: UInt8 = 0
-//										var streamDep = UInt32(0)
-//										var weight = UInt8(0)
-
+						//										var streamDep = UInt32(0)
+						//										var weight = UInt8(0)
+						
 						if padded {
 							padLength = bytes.export8Bits()
 						}
-//										if priority {
-//											streamDep = bytes.export32Bits()
-//											weight = bytes.export8Bits()
-//										}
+						//										if priority {
+						//											streamDep = bytes.export32Bits()
+						//											weight = bytes.export8Bits()
+						//										}
 						self.decodeHeaders(from: bytes, endPosition: ba.count - Int(padLength), listener: response)
 					}
-					streamOpen = (frame.flags & HTTP2_END_STREAM) == 0
+					streamOpen = (frame.flags & flagEndStream) == 0
 					if !streamOpen {
 						callback(response, nil)
 					}
-				case HTTP2_DATA:
+				case .data:
 					if let payload = frame.payload, frame.length > 0 {
-                        response.appendBody(bytes: payload)
+						response.appendBody(bytes: payload)
 					}
-					streamOpen = (frame.flags & HTTP2_END_STREAM) == 0
+					streamOpen = (frame.flags & flagEndStream) == 0
 					if !streamOpen {
 						callback(response, nil)
 					}
@@ -437,7 +341,7 @@ open class HTTP2Client {
 					streamOpen = false
 					callback(nil, "Unexpected frame type \(frame.typeStr)")
 				}
-
+				
 			} else {
 				self.close()
 				streamOpen = false
@@ -445,17 +349,17 @@ open class HTTP2Client {
 			}
 		}
 	}
-
+	
 	public func sendRequest(_ request: HTTPRequest, callback: @escaping (HTTPResponse?, String?) -> ()) {
 		let streamId = self.newStreamId
 		self.streams[streamId] = .idle
-
+		
 		let headerBytes = Bytes()
-
+		
 		let method = request.method
 		let scheme = ssl ? "https" : "http"
 		let path = request.uri
-
+		
 		do {
 			let encoder = HPACKEncoder()
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":method", valueStr: method.description)
@@ -463,7 +367,7 @@ open class HTTP2Client {
 			try encoder.encodeHeader(out: headerBytes, nameStr: ":path", valueStr: path, sensitive: false, incrementalIndexing: false)
 			try encoder.encodeHeader(out: headerBytes, nameStr: "host", valueStr: self.host)
 			try encoder.encodeHeader(out: headerBytes, nameStr: "content-length", valueStr: "\(request.postBodyBytes?.count ?? 0)")
-
+			
 			for (name, value) in request.headers {
 				let lowered  = name.standardName.lowercased()
 				var inc = true
@@ -476,16 +380,20 @@ open class HTTP2Client {
 				}
 				try encoder.encodeHeader(out: headerBytes, name: n, value: v, sensitive: false, incrementalIndexing: inc)
 			}
-
+			
 		} catch {
 			callback(nil, "Header encoding exception \(error)")
 			return
 		}
 		let hasData = nil != request.postBodyBytes && request.postBodyBytes!.count > 0
-		let frame = HTTP2Frame(length: UInt32(headerBytes.data.count), type: HTTP2_HEADERS, flags: HTTP2_END_HEADERS | (hasData ? 0 : HTTP2_END_STREAM), streamId: streamId, payload: headerBytes.data)
+		let frame = HTTP2Frame(length: UInt32(headerBytes.data.count),
+		                       type: HTTP2FrameType.headers.rawValue,
+		                       flags: flagEndHeaders | (hasData ? 0 : flagEndStream),
+		                       streamId: streamId,
+		                       payload: headerBytes.data)
 		self.writeHTTP2Frame(frame) { [weak self]
 			b in
-
+			
 			guard b else {
 				callback(nil, "Unable to write frame")
 				return
@@ -496,33 +404,41 @@ open class HTTP2Client {
 			}
 			s.streams[streamId] = .open
 			if hasData {
-
-				let frame2 = HTTP2Frame(length: UInt32(request.postBodyBytes?.count ?? 0), type: HTTP2_DATA, flags: HTTP2_END_STREAM, streamId: streamId, payload: request.postBodyBytes)
+				
+				let frame2 = HTTP2Frame(length: UInt32(request.postBodyBytes?.count ?? 0),
+				                        type: HTTP2FrameType.data.rawValue,
+				                        flags: flagEndStream,
+				                        streamId: streamId,
+				                        payload: request.postBodyBytes)
 				s.writeHTTP2Frame(frame2) { [weak self]
 					b in
-
+					
 					guard let s = self else {
 						callback(nil, nil)
 						return
 					}
-
+					
 					s.awaitResponse(streamId: streamId, request: request, callback: callback)
 				}
-
+				
 			} else {
 				s.awaitResponse(streamId: streamId, request: request, callback: callback)
 			}
 		}
 	}
-
+	
 	func completeConnect(_ callback: @escaping (Bool) -> ()) {
-		net.write(string: "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n") {
+		net.write(string: http2ConnectionPreface) {
 			wrote in
-
-			let settings = HTTP2Frame(length: 0, type: HTTP2_SETTINGS, flags: 0, streamId: 0, payload: nil)
+			
+			let settings = HTTP2Frame(length: 0,
+			                          type: HTTP2FrameType.settings.rawValue,
+			                          flags: 0,
+			                          streamId: 0,
+			                          payload: nil)
 			self.writeHTTP2Frame(settings) { [weak self]
 				b in
-
+				
 				if b {
 					self?.startReadThread()
 				}
@@ -530,10 +446,10 @@ open class HTTP2Client {
 			}
 		}
 	}
-
+	
 	func bytesToHeader(_ b: [UInt8]) -> HTTP2Frame {
 		let payloadLength = (UInt32(b[0]) << 16) + (UInt32(b[1]) << 8) + UInt32(b[2])
-
+		
 		let type = b[3]
 		let flags = b[4]
 		var sid: UInt32 = UInt32(b[5])
@@ -543,46 +459,46 @@ open class HTTP2Client {
 		sid += UInt32(b[7])
 		sid <<= 8
 		sid += UInt32(b[8])
-
+		
 		sid &= ~0x80000000
-
+		
 		return HTTP2Frame(length: payloadLength, type: type, flags: flags, streamId: sid, payload: nil)
 	}
-
+	
 	func readHTTP2Frame(timeout time: Double, callback: @escaping (HTTP2Frame?) -> ()) {
 		let net = self.net
 		net.readBytesFully(count: 9, timeoutSeconds: time) {
 			bytes in
-
+			
 			if let b = bytes {
-
+				
 				var header = self.bytesToHeader(b)
-
+				
 				if header.length > 0 {
 					net.readBytesFully(count: Int(header.length), timeoutSeconds: time) {
 						bytes in
-
+						
 						header.payload = bytes
-
+						
 						callback(header)
 					}
 				} else {
 					callback(header)
 				}
-
+				
 			} else {
 				callback(nil)
 			}
 		}
 	}
-
+	
 	func writeHTTP2Frame(_ frame: HTTP2Frame, callback: (Bool) -> ()) {
 		if !net.isValid {
 			callback(false)
 		} else if !net.writeFully(bytes: frame.headerBytes()) {
 			callback(false)
 		} else {
-//			print("Wrote frame \(frame.typeStr) \(frame.flagsStr) \(frame.streamId)")
+			//			print("Wrote frame \(frame.typeStr) \(frame.flagsStr) \(frame.streamId)")
 			if let p = frame.payload {
 				callback(net.writeFully(bytes: p))
 			} else {
@@ -590,7 +506,7 @@ open class HTTP2Client {
 			}
 		}
 	}
-
+	
 	func encodeHeaders(headers: [(String, String)]) -> Bytes {
 		let b = Bytes()
 		for header in headers {
@@ -605,7 +521,7 @@ open class HTTP2Client {
 		}
 		return b
 	}
-
+	
 	func decodeHeaders(from frm: Bytes, endPosition: Int, listener: HeaderListener) {
 		do {
 			try decoder.decode(input: frm, headerListener: listener)

@@ -680,7 +680,7 @@ final class HuffmanDecoder {
 		var current = 0
 		var bits = 0
 		for byte in buf {
-			let b = byte & 0xFF
+			let b = byte// & 0xFF
 			current = (current << 8) | Int(b)
 			bits += 8
 			while bits >= 8 {
@@ -717,16 +717,16 @@ final class HuffmanDecoder {
 		return retBytes
 	}
 	
-	static func buildTree(codes cods: [Int], lengths: [UInt8]) -> Node {
+	static func buildTree(codes: [Int], lengths: [UInt8]) -> Node {
 		let root = Node()
-		for i in 0..<cods.count {
-			insert(root: root, symbol: i, code: cods[i], length: lengths[i])
+		for i in 0..<codes.count {
+			insert(root: root, symbol: i, code: codes[i], length: lengths[i])
 		}
 		return root
 	}
 	
-	static func insert(root rooot: Node, symbol: Int, code: Int, length: UInt8) {
-		var current = rooot
+	static func insert(root: Node, symbol: Int, code: Int, length: UInt8) {
+		var current = root
 		var len = Int(length)
 		while len > 8 {
 			len -= 8
@@ -736,7 +736,7 @@ final class HuffmanDecoder {
 			}
 			current = current.children![i]!
 		}
-		let terminal = Node(symbol: symbol, bits: length)
+		let terminal = Node(symbol: symbol, bits: UInt8(len))
 		let shift = 8 - len
 		let start = (code << shift) & 0xFF
 		let end = 1 << shift
@@ -754,11 +754,11 @@ final class HPACKEncoder {
 	
 	static let bucketSize = 17
 	static let empty = [UInt8]()
-	static let INDEX_MAX = 2147483647
-	static let INDEX_MIN = -2147483648
+	static let indexMax = 2147483647
+	static let indexMin = -2147483648
 	
 	var headerFields: [HeaderEntry?]
-	var head = HeaderEntry(hash: -1, name: empty, value: empty, index: INDEX_MAX, next: nil)
+	var head = HeaderEntry(hash: -1, name: empty, value: empty, index: indexMax, next: nil)
 	var size = 0
 	var capacity = 0
 	
@@ -797,7 +797,7 @@ final class HPACKEncoder {
 	}
 	
 	/// Construct an HPACKEncoder with the indicated maximum capacity.
-	init(maxCapacity: Int = 2048) {
+	init(maxCapacity: Int = 4096) {
 		self.capacity = maxCapacity
 		self.head.after = self.head
 		self.head.before = self.head
@@ -859,8 +859,8 @@ final class HPACKEncoder {
 		if h > 0 {
 			return h
 		}
-		if h == HPACKEncoder.INDEX_MIN {
-			return HPACKEncoder.INDEX_MAX
+		if h == HPACKEncoder.indexMin {
+			return HPACKEncoder.indexMax
 		}
 		return -h
 	}
@@ -1104,7 +1104,7 @@ final class HPACKDecoder {
 	var valueLength = 0
 	
 	/// Construct an HPACKDecoder with the given memory constraints.
-	init(maxHeaderSize: Int = 256, maxHeaderTableSize: Int = 256) {
+	init(maxHeaderSize: Int = 4096, maxHeaderTableSize: Int = 4096) {
 		self.dynamicTable = DynamicTable(initialCapacity: maxHeaderTableSize)
 		self.maxHeaderSize = maxHeaderSize
 		self.maxDynamicTableSize = maxHeaderTableSize
@@ -1291,7 +1291,7 @@ final class HPACKDecoder {
 				if maxSize == -1 {
 					return
 				}
-				if maxSize > HPACKEncoder.INDEX_MAX - index {
+				if maxSize > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				setDynamicTableSize(index + maxSize)
@@ -1302,7 +1302,7 @@ final class HPACKDecoder {
 				if headerIndex == -1 {
 					return
 				}
-				if headerIndex > HPACKEncoder.INDEX_MAX - index {
+				if headerIndex > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				try indexHeader(index + headerIndex, headerListener: headerListener)
@@ -1313,7 +1313,7 @@ final class HPACKDecoder {
 				if nameIndex == -1 {
 					return
 				}
-				if nameIndex > HPACKEncoder.INDEX_MAX - index {
+				if nameIndex > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				try readName(index + nameIndex)
@@ -1355,7 +1355,7 @@ final class HPACKDecoder {
 				if nameLength == -1 {
 					return
 				}
-				if nameLength > HPACKEncoder.INDEX_MAX - index {
+				if nameLength > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				nameLength += index
@@ -1431,7 +1431,7 @@ final class HPACKDecoder {
 				if valueLength == -1 {
 					return
 				}
-				if valueLength > HPACKEncoder.INDEX_MAX - index {
+				if valueLength > HPACKEncoder.indexMax - index {
 					throw Exception.decompressionException
 				}
 				valueLength += index
