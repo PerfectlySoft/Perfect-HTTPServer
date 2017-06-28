@@ -39,12 +39,8 @@ final class HTTP2Response: HTTPResponse {
 		return f.makeIterator()
 	}
 	var frameWriter: HTTP2FrameWriter? { return session?.frameWriter }
-	var windowSize: Int {
-		get { return h2Request.windowSize }
-		set { h2Request.windowSize = newValue }
-	}
 	var maxFrameSize: Int {
-		return h2Request.session?.settings.maxFrameSize ?? 16384
+		return h2Request.session?.clientSettings.maxFrameSize ?? 16384
 	}
 	var streamId: UInt32 { return h2Request.streamId }
 	
@@ -84,6 +80,7 @@ final class HTTP2Response: HTTPResponse {
 		}
 		return addHeader(name, value: value)
 	}
+	
 	var headers: AnyIterator<(HTTPResponseHeader.Name, String)> {
 		var g = self.headerStore.makeIterator()
 		return AnyIterator<(HTTPResponseHeader.Name, String)> {
@@ -119,6 +116,10 @@ final class HTTP2Response: HTTPResponse {
 		}
 		let bytes = Bytes()
 		do {
+			session?.encoderLock.lock()
+			defer {
+				session?.encoderLock.unlock()
+			}
 			try encoder.encodeHeader(out: bytes, nameStr: ":status", valueStr: "\(status.code)")
 			try headerStore.forEach {
 				(arg0) in
@@ -134,6 +135,13 @@ final class HTTP2Response: HTTPResponse {
 		callback(true)
 	}
 	
+	func maxSendSize(want: Int) -> Int {
+		let a = want, b = maxFrameSize,
+		//	c = session!.connectionFlowWindows.clientWindowSize,
+			d = h2Request.streamFlowWindows.clientWindowSize
+		return min(a, b, d)
+	}
+	
 	func pushBody(final: Bool, bodyBytes inBodyBytes: [UInt8], callback: @escaping (Bool) -> ()) {
 		guard h2Request.streamState != .closed else {
 			return callback(false)
@@ -141,23 +149,30 @@ final class HTTP2Response: HTTPResponse {
 		guard final || !inBodyBytes.isEmpty else {
 			return callback(true)
 		}
-		if !inBodyBytes.isEmpty && windowSize == 0 {
-			h2Request.windowSizeChanged = {
-				Threading.dispatch { //  get off frame read thread
-					self.pushBody(final: final, bodyBytes: inBodyBytes, callback: callback)
-				}
-			}
-			return
-		}
 		if final {
 			// !FIX! this needs an API change for response filters to let them know
 			// when a call is the last
 			request.scratchPad["_flushing_"] = true
 		}
-		let sendBytes: [UInt8]
-		let remainingBodyBytes: [UInt8]
+		let sendBytes: [UInt8] // actually sending in this frame
+		let remainingBodyBytes: [UInt8] // left over to send next frame
 		let moreToCome: Bool
-		let maxSize = min(windowSize, maxFrameSize)
+		let maxSize = maxSendSize(want: inBodyBytes.count)
+		guard (final && inBodyBytes.isEmpty) || maxSize > 0 else {
+			h2Request.unblockCallback = {
+				if self.debug {
+					print("response \(self.streamId) unblocked")
+				}
+				guard self.h2Request.streamState != .closed else {
+					return callback(false)
+				}
+				self.pushBody(final: final, bodyBytes: inBodyBytes, callback: callback)
+			}
+			if debug {
+				print("response \(streamId) blocked")
+			}
+			return
+		}
 		if inBodyBytes.count > maxSize {
 			sendBytes = Array(inBodyBytes[0..<maxSize])
 			remainingBodyBytes = Array(inBodyBytes[maxSize..<inBodyBytes.count])
@@ -167,9 +182,9 @@ final class HTTP2Response: HTTPResponse {
 			remainingBodyBytes = []
 			moreToCome = false
 		}
-		windowSize -= sendBytes.count
+		session?.decreaseClientWindow(stream: streamId, by: sendBytes.count)
 		if debug {
-			print("response \(streamId) body bytes: \(sendBytes.count), remaining: \(remainingBodyBytes.count), window: \(windowSize)")
+			print("response \(streamId) body bytes: \(sendBytes.count), remaining: \(remainingBodyBytes.count), send window: \(h2Request.streamFlowWindows.clientWindowSize)")
 		}
 		var frame = HTTP2Frame(type: .data,
 		                       flags: (!moreToCome && final) ? flagEndStream : 0,

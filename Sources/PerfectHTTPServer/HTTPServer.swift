@@ -348,7 +348,8 @@ public class HTTPServer {
 	}
 	
 	private func routeRequest(_ request: HTTPRequest, response: HTTPResponse) {
-		if let nav = routeNavigator, let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
+		if let nav = routeNavigator,
+				let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
 			handler(request, response)
 		} else {
 			response.status = .notFound

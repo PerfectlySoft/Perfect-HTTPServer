@@ -61,6 +61,7 @@ class HTTP2FrameWriter {
 			}
 			self.enqueuedFrames.remove(at: 0)
 			self.enqueuedFramesLock.unlock()
+			frame.willSendCallback?()
 			let bytes = frame.headerBytes() + (frame.payload ?? [])
 			self.net.write(bytes: bytes) {
 				wrote in
