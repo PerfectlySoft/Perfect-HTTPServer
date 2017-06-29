@@ -156,7 +156,9 @@ The arguments.swift file provides handlers for command line arguments as well as
 ```swift
 configureServer(server)
 ```
+
 This code block will launch the server. Remember that any command after server.start() will not be reached.
+
 ```swift
 do {
 	// Launch the HTTP server.
