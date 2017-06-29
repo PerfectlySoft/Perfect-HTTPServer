@@ -148,7 +148,8 @@ extension TLSConfiguration {
 		          keyPath: data["keyPath"] as? String,
 		          caCertPath: data["caCertPath"] as? String,
 		          certVerifyMode: OpenSSLVerifyMode(string: data["verifyMode"] as? String ?? ""),
-		          cipherList: data["cipherList"] as? [String] ?? TLSConfiguration.defaultCipherList)
+		          cipherList: data["cipherList"] as? [String] ?? TLSConfiguration.defaultCipherList,
+		          alpnSupport: (data["alpnSupport"] as? [String] ?? []).flatMap { HTTPServer.ALPNSupport(rawValue: $0) })
 	}
 }
 

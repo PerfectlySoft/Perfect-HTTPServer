@@ -30,10 +30,9 @@ import PerfectHTTP
 #endif
 
 /// Stand-alone HTTP server.
-public class HTTPServer {
-	
+public class HTTPServer: ServerInstance {
+	public typealias certKeyPair = (sslCert: String, sslKey: String)
 	private var net: NetTCP?
-	
 	/// The directory in which web documents are sought.
 	/// Setting the document root will add a default URL route which permits
 	/// static files to be served from within.
@@ -62,7 +61,8 @@ public class HTTPServer {
 	/// The canonical server name.
 	/// This is important if utilizing the `HTTPRequest.serverName` property.
 	public var serverName = ""
-	public var ssl: (sslCert: String, sslKey: String)?
+	public var ssl: certKeyPair?
+	public var sniSupport: [String:certKeyPair] = [:]
 	public var caCert: String?
 	public var certVerifyMode: OpenSSLVerifyMode?
 	public var cipherList = [
@@ -87,7 +87,9 @@ public class HTTPServer {
 	
 	/// Routing support
 	private var routes = Routes()
-	private var routeNavigator: RouteNavigator?
+	private lazy var routeNavigator: RouteNavigator? = {
+		return self.routes.navigator
+	}()
 	
 	public enum ALPNSupport: String {
 		case http11 = "http/1.1", http2 = "h2"
@@ -215,12 +217,18 @@ public class HTTPServer {
 		try self.startInner()
 	}
 	
+	func accepted(net: NetTCP) {
+		Threading.dispatch {
+			self.handleConnection(net)
+		}
+	}
+	
 	private func startInner() throws {
 		// 1.0 compatability ONLY
 		if let compatRoutes = compatRoutes {
 			self.addRoutes(compatRoutes)
 		}
-		self.routeNavigator = self.routes.navigator
+//		self.routeNavigator = self.routes.navigator
 		
 		guard let sock = self.net else {
 			Log.terminal(message: "Server could not be started. Socket was not initialized.")
@@ -240,9 +248,7 @@ public class HTTPServer {
 			guard let net = net else {
 				return
 			}
-			Threading.dispatch {
-				self?.handleConnection(net)
-			}
+			self?.accepted(net: net)
 		}
 	}
 	

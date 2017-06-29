@@ -86,6 +86,16 @@ public extension HTTPServer {
 			return http
 		}
 		
+		init() {
+			self.name = ""
+			self.address = ""
+			self.port = 0
+			self.routes = .init()
+			self.requestFilters = []
+			self.responseFilters = []
+			self.tlsConfig = nil
+		}
+		
 		public init(name: String, address: String, port: Int, routes: Routes,
 		            requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		            responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) {
@@ -160,6 +170,12 @@ public extension HTTPServer {
 	}
 }
 
+protocol ServerInstance {
+	func start() throws
+	func bind() throws
+	func stop()
+}
+
 public extension HTTPServer {
 	public struct LaunchFailure: Error {
 		let message: String
@@ -171,12 +187,17 @@ public extension HTTPServer {
 		var error: Error?
 		public var terminated = false
 		public let server: Server
-		var httpServer: HTTPServer?
+		var httpServer: ServerInstance?
 		
 		var id: String { return "\(server.name):\(server.port)" }
 		
 		init(_ server: Server) {
 			self.server = server
+		}
+		
+		init(_ server: HTTPMultiplexer) {
+			self.httpServer = server
+			self.server = server.synthServer
 		}
 		
 		@discardableResult
@@ -216,7 +237,9 @@ public extension HTTPServer {
 		}
 		
 		func bindServer() throws {
-			self.httpServer = server.server
+			if nil == self.httpServer {
+				self.httpServer = server.server
+			}
 			guard let httpServer = self.httpServer else {
 				throw LaunchFailure(message: "Could not get HTTPServer", configuration: server)
 			}
@@ -272,10 +295,36 @@ public extension HTTPServer {
 		return try launch(wait: wait, name: name, port: port, routes: Routes(routes), requestFilters: requestFilters, responseFilters: responseFilters)
 	}
 	
+	static func getLaunchContexts(_ servers: [Server]) throws -> [LaunchContext] {
+		var notSSL = [Server]()
+		var singleServers = [String:Server]()
+		var multiplexers = [String:HTTPMultiplexer]()
+		for server in servers {
+			if let _ = server.tlsConfig {
+				let id = "\(server.address):\(server.port)"
+				if let existingMulti = multiplexers[id] {
+					try existingMulti.addServer(server.server)
+				} else if let existingSingle = singleServers[id] {
+					singleServers.removeValue(forKey: id)
+					let multi = HTTPMultiplexer()
+					try multi.addServer(existingSingle.server)
+					try multi.addServer(server.server)
+					multiplexers[id] = multi
+				} else {
+					singleServers[id] = server
+				}
+			} else {
+				notSSL.append(server)
+			}
+		}
+		
+		return (notSSL + singleServers.values).map { LaunchContext($0) } + multiplexers.values.map { LaunchContext($0) }
+	}
+	
 	// launch with array
 	@discardableResult
 	public static func launch(wait: Bool = true, _ servers: [Server]) throws -> [LaunchContext] {
-		let ctx = servers.map { LaunchContext($0) }
+		let ctx = try getLaunchContexts(servers)
 		try ctx.forEach { try $0.bindServer() }
 		try switchUser()
 		try ctx.forEach { try $0.launchServer() }
