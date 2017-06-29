@@ -90,11 +90,15 @@ class HTTPMultiplexer: ServerInstance {
 			guard let net = net as? NetTCPSSL else {
 				return
 			}
-			guard let sn = net.serverNameIdentified,
-				let server = self.servers[sn.lowercased()] else {
-					return
+			let sn = net.serverNameIdentified
+			if nil != sn, let server = self.servers[sn!.lowercased()] {
+				server.accepted(net: net)
+			} else if let server = self.servers["*"] {
+				server.accepted(net: net)
+			} else {
+				net.close()
+				Log.warning(message: "Client wanted host \(sn ?? "*"). Server not found.")
 			}
-			server.accepted(net: net)
 		}
 	}
 	
