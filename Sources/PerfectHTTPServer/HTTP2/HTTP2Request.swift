@@ -129,6 +129,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	let streamId: UInt32
 	var streamState = HTTP2StreamState.idle
 	var streamFlowWindows: HTTP2FlowWindows
+	var encodedHeadersBlock = [UInt8]()
 	var endOfHeaders = false
 	var unblockCallback: (() -> ())?
 	var debug: Bool { return session?.debug ?? false }
@@ -144,6 +145,17 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	
 	deinit {
 		if debug { print("~HTTP2Request \(streamId)") }
+	}
+	
+	func decodeHeadersBlock() {
+		do {
+			decoder.reset()
+			try decoder.decode(input: Bytes(existingBytes: encodedHeadersBlock), headerListener: self)
+		} catch {
+			session?.fatalError(streamId: streamId, error: .compressionError, msg: "error while decoding headers \(error)")
+			streamState = .closed
+		}
+		encodedHeadersBlock = []
 	}
 	
 	func headersFrame(_ frame: HTTP2Frame) {
@@ -170,13 +182,10 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 				let _/*streamDep*/ = bytes.export32Bits()
 				let _/*weight*/ = bytes.export8Bits()
 			}
-			do {
-				decoder.reset()
-				try decoder.decode(input: bytes, headerListener: self)
-			} catch {
-				session?.fatalError(streamId: streamId, error: .compressionError, msg: "error while decoding headers \(error)")
-				streamState = .closed
-			}
+			encodedHeadersBlock += bytes.exportBytes(count: bytes.availableExportBytes)
+		}
+		if endOfHeaders {
+			decodeHeadersBlock()
 		}
 		if endOfHeaders && endOfStream {
 			processRequest()
@@ -199,13 +208,10 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 			print("\tstream: \(streamId)")
 		}
 		if let ba = frame.payload, ba.count > 0 {
-			let bytes = Bytes(existingBytes: ba)
-			do {
-				try decoder.decode(input: bytes, headerListener: self)
-			} catch {
-				session?.fatalError(streamId: streamId, error: .compressionError, msg: "error while decoding headers \(error)")
-				streamState = .closed
-			}
+			encodedHeadersBlock += ba
+		}
+		if endOfHeaders {
+			decodeHeadersBlock()
 		}
 		if endOfHeaders && endOfStream {
 			processRequest()
