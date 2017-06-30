@@ -26,6 +26,8 @@ let settingsMaxHeaderListSize: UInt16 = 0x6
 
 let http2ConnectionPreface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 
+public var http2Debug = false
+
 enum HTTP2StreamState {
 	case idle, reserved, open, halfClosed, closed
 }

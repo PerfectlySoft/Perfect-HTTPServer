@@ -130,9 +130,33 @@ final class HTTP2Response: HTTPResponse {
 			h2Request.session?.fatalError(streamId: h2Request.streamId, error: .internalError, msg: "Error while encoding headers")
 			return callback(false)
 		}
-		let frame = HTTP2Frame(type: .headers, flags: flagEndHeaders, streamId: h2Request.streamId, payload: bytes.data)
-		frameWriter?.enqueueFrame(frame)
-		callback(true)
+		pushHeaderBlock(bytes.data, sendCount: 0, callback: callback)
+	}
+	
+	func pushHeaderBlock(_ bytes: [UInt8], sendCount: Int, callback: @escaping (Bool) -> ()) {
+		let maxFrameSize = session?.clientSettings.maxFrameSize ?? 16384
+		let final = bytes.count <= maxFrameSize
+		if final {
+			let frame: HTTP2Frame
+			if sendCount == 0 {
+				frame = HTTP2Frame(type: .headers, flags: flagEndHeaders, streamId: h2Request.streamId, payload: bytes)
+			} else {
+				frame = HTTP2Frame(type: .continuation, flags: flagEndHeaders, streamId: h2Request.streamId, payload: bytes)
+			}
+			frameWriter?.enqueueFrame(frame)
+			callback(true)
+		} else {
+			let thisBytes = Array(bytes[0..<maxFrameSize])
+			let nextBytes = Array(bytes[maxFrameSize..<bytes.count])
+			let frame: HTTP2Frame
+			if sendCount == 0 {
+				frame = HTTP2Frame(type: .headers, flags: 0, streamId: h2Request.streamId, payload: thisBytes)
+			} else {
+				frame = HTTP2Frame(type: .continuation, flags: 0, streamId: h2Request.streamId, payload: thisBytes)
+			}
+			frameWriter?.enqueueFrame(frame)
+			pushHeaderBlock(nextBytes, sendCount: sendCount + 1, callback: callback)
+		}
 	}
 	
 	func maxSendSize(want: Int) -> Int {

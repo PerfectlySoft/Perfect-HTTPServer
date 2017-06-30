@@ -88,7 +88,7 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	
 	init(_ net: NetTCP,
 	     server: HTTPServer,
-	     debug: Bool = true) {
+	     debug: Bool = http2Debug) {
 		self.net = net
 		self.server = server
 		self.debug = debug
@@ -100,7 +100,9 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	}
 	
 	deinit {
-		print("~HTTP2Session")
+		if debug {
+			print("~HTTP2Session")
+		}
 	}
 	
 	private func pinSelf() {
@@ -168,12 +170,16 @@ extension HTTP2Session {
 		return streams[streamId]
 	}
 	
-	func putRequest(_ request: HTTP2Request) {
+	func putRequest(_ request: HTTP2Request) -> Bool {
 		streamsLock.lock()
 		defer {
 			streamsLock.unlock()
 		}
+		if streams.count >= serverSettings.maxConcurrentStreams {
+			return false
+		}
 		streams[request.streamId] = request
+		return true
 	}
 	
 	func removeRequest(_ streamId: UInt32) {
@@ -188,7 +194,9 @@ extension HTTP2Session {
 extension HTTP2Session {
 	// this is called on the main frame reading thread
 	func receiveFrame(_ frame: HTTP2Frame) {
-		print("recv frame: \(frame.type)")
+		if debug {
+			print("recv frame: \(frame.type)")
+		}
 		if state == .setup && frame.type != .settings {
 			fatalError(error: .protocolError, msg: "Settings expected")
 			return
@@ -237,7 +245,9 @@ extension HTTP2Session {
 			                          flags: flagSettingsAck)
 			frameWriter?.enqueueFrame(response)
 		} else {
-			print("\tack")
+			if debug {
+				print("\tack")
+			}
 			increaseServerConnectionWindow(by: receiveWindowTopOff)
 		}
 	}
@@ -248,15 +258,6 @@ extension HTTP2Session {
 		}
 		let bytes = Bytes(existingBytes: b)
 		let windowSize = Int(bytes.export32Bits().netToHost)
-//		var sid: UInt32 = UInt32(b[0])
-//		sid <<= 8
-//		sid += UInt32(b[1])
-//		sid <<= 8
-//		sid += UInt32(b[2])
-//		sid <<= 8
-//		sid += UInt32(b[3])
-//		sid &= ~0x80000000
-//		let windowSize = Int(sid.netToHost)
 		guard windowSize > 0 else {
 			return fatalError(error: .protocolError, msg: "Received window size of zero")
 		}
@@ -270,8 +271,12 @@ extension HTTP2Session {
 	func headersFrame(_ frame: HTTP2Frame) {
 		let streamId = frame.streamId
 		let request = HTTP2Request(streamId, session: self)
-		putRequest(request)
-		request.headersFrame(frame)
+		if putRequest(request) {
+			request.headersFrame(frame)
+		} else {
+			let frame = HTTP2Frame(type: .cancelStream, streamId: frame.streamId, payload: Bytes().importFrame32(HTTP2Error.refusedStream.rawValue).data)
+			frameWriter?.enqueueFrame(frame)
+		}
 	}
 	
 	func continuationFrame(_ frame: HTTP2Frame) {
@@ -335,7 +340,9 @@ extension HTTP2Session {
 			let errorCode = b.export32Bits().netToHost
 			let remainingBytes = b.exportBytes(count: b.availableExportBytes)
 			let errorStr = String(validatingUTF8: remainingBytes)
-			print("Bye: last stream: \(lastStreamId) \(HTTP2Error(rawValue: errorCode)?.rawValue ?? 0) \(errorStr ?? "")")
+			if debug {
+				print("Bye: last stream: \(lastStreamId) \(HTTP2Error(rawValue: errorCode)?.rawValue ?? 0) \(errorStr ?? "")")
+			}
 		}
 		networkShutdown()
 	}

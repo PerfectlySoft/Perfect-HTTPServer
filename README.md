@@ -71,7 +71,7 @@ try HTTPServer.launch(
 	              routes: secureRoutes))
 ```
 
-This will enable HTTP/2 to be used over secure connections if the client supports it. If the client does not support HTTP/2 then the server will use HTTP 1.x. HTTP/2 support is only offered over secure connections. The HTTP/2 server will print much debugging information to the console while in use.
+This will enable HTTP/2 to be used over secure connections if the client supports it. If the client does not support HTTP/2 then the server will use HTTP 1.x. HTTP/2 support is only offered over secure connections. Setting the global `http2Debug` variable to true will have the HTTP/2 server print much debugging information to the console while in use.
 
 Please contact us if you experience any problems or incompatibilities while experimenting with HTTP/2 support.
 
