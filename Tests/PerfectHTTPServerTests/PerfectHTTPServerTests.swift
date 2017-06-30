@@ -70,11 +70,9 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
-			
 			guard case .ok = ok else {
 				return XCTAssert(false, "\(ok)")
 			}
-			connection.headers.forEach { print($0) }
 			XCTAssertTrue(connection.header(.custom(name: "X-Foo")) == "bar", "\(connection.headers)")
 			XCTAssertTrue(connection.header(.custom(name: "X-Bar")) == "", "\(connection.headers)")
 			XCTAssertTrue(connection.contentType == "application/x-www-form-urlencoded", "\(connection.headers)")
@@ -914,6 +912,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			"servers": [
 				[
 					"name":"localhost",
+					"address":"0.0.0.0",
 					"port":port,
 					"routes":[
 						["method":"get", "uri":"/test.html", "handler":handler],
@@ -937,21 +936,22 @@ class PerfectHTTPServerTests: XCTestCase {
 		}
 		
 		let clientExpectation = self.expectation(description: "client")
-		
+		Threading.sleep(seconds: 1.0)
 		do {
-			try NetTCP().connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+			let client = NetTCP()
+			try client.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
 				net in
 				
 				guard let net = net else {
 					XCTAssert(false, "Could not connect to server")
 					return clientExpectation.fulfill()
 				}
-				let reqStr = "GET /test.html HTTP/1.0\r\nHost: localhost:\(port)\r\nAccept-Encoding: gzip, deflate\r\n\r\n"
+				let reqStr = "GET /test.html HTTP/1.1\r\nHost: localhost:\(port)\r\nAccept-Encoding: gzip, deflate\r\n\r\n"
 				net.write(string: reqStr) {
 					count in
 					
 					guard count == reqStr.utf8.count else {
-						XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+						XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count) \(String(validatingUTF8: strerror(errno)) ?? "no error msg")")
 						return clientExpectation.fulfill()
 					}
 					
