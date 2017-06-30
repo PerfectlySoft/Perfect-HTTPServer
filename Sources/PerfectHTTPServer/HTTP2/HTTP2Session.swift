@@ -170,12 +170,16 @@ extension HTTP2Session {
 		return streams[streamId]
 	}
 	
-	func putRequest(_ request: HTTP2Request) {
+	func putRequest(_ request: HTTP2Request) -> Bool {
 		streamsLock.lock()
 		defer {
 			streamsLock.unlock()
 		}
+		if streams.count >= serverSettings.maxConcurrentStreams {
+			return false
+		}
 		streams[request.streamId] = request
+		return true
 	}
 	
 	func removeRequest(_ streamId: UInt32) {
@@ -267,8 +271,12 @@ extension HTTP2Session {
 	func headersFrame(_ frame: HTTP2Frame) {
 		let streamId = frame.streamId
 		let request = HTTP2Request(streamId, session: self)
-		putRequest(request)
-		request.headersFrame(frame)
+		if putRequest(request) {
+			request.headersFrame(frame)
+		} else {
+			let frame = HTTP2Frame(type: .cancelStream, streamId: frame.streamId, payload: Bytes().importFrame32(HTTP2Error.refusedStream.rawValue).data)
+			frameWriter?.enqueueFrame(frame)
+		}
 	}
 	
 	func continuationFrame(_ frame: HTTP2Frame) {
