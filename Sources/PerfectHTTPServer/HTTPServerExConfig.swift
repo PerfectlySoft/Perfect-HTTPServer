@@ -80,6 +80,8 @@ private extension Route {
 			handler = tryHandler
 		case let handlerFunc as ReturnsRequestHandlerGivenData:
 			handler = try handlerFunc(data)
+		case let handlerFunc as RequestHandler:
+			handler = handlerFunc
 		default:
 			throw PerfectError.apiError("No valid handler was provided \"handler\"=\(String(describing: data["handler"]))")
 		}

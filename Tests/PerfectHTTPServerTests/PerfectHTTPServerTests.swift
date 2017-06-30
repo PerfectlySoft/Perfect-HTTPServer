@@ -899,13 +899,15 @@ class PerfectHTTPServerTests: XCTestCase {
 		let port = 8282
 		
 		func handler(data: [String:Any]) throws -> RequestHandler {
-			return {
-				req, resp in
-				for _ in 0..<20 {
-					resp.appendBody(string: "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")
-				}
-				resp.completed()
-			}
+			return handler2
+		}
+		
+		func handler2(request: HTTPRequest, response: HTTPResponse) {
+			// Respond with a simple message.
+			response.setHeader(.contentType, value: "text/html")
+			response.appendBody(string: "<html><title>Hello, world!</title><body>Hello, world!</body></html>")
+			// Ensure that response.completed() is called when your processing is done.
+			response.completed()
 		}
 		
 		let confData = [
@@ -915,7 +917,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					"port":port,
 					"routes":[
 						["method":"get", "uri":"/test.html", "handler":handler],
-						["method":"get", "uri":"/test.png", "handler":handler]
+						["method":"get", "uri":"/test.png", "handler":handler2]
 					],
 					"filters":[
 						[
