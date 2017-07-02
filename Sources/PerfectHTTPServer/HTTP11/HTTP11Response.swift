@@ -47,7 +47,8 @@ class HTTP11Response: HTTPResponse {
     var wroteHeaders = false
     var completedCallback: (() -> ())?
     let request: HTTPRequest
-    
+	var handlers: IndexingIterator<[RequestHandler]>?
+	
     lazy var isKeepAlive: Bool = {
         // http 1.1 is keep-alive unless otherwise noted
         // http 1.0 is keep-alive if specifically noted
@@ -82,6 +83,10 @@ class HTTP11Response: HTTPResponse {
             cb()
         }
     }
+	
+	func next() {
+		
+	}
 	
 	func abort() {
 		self.completedCallback = nil

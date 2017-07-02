@@ -355,8 +355,17 @@ public class HTTPServer: ServerInstance {
 	
 	private func routeRequest(_ request: HTTPRequest, response: HTTPResponse) {
 		if let nav = routeNavigator,
-				let handler = nav.findHandler(pathComponents: request.pathComponents, webRequest: request) {
-			handler(request, response)
+				let handlers = nav.findHandlers(pathComponents: request.pathComponents, webRequest: request) {
+			// cheating
+			if let resp = response as? HTTP2Response {
+				resp.handlers = handlers.makeIterator()
+				resp.next()
+			} else if let resp = response as? HTTP11Response {
+				resp.handlers = handlers.makeIterator()
+				resp.next()
+			} else {
+				handlers.last?(request, response)
+			}
 		} else {
 			response.status = .notFound
 			response.appendBody(string: "The file \(request.path) was not found.")
