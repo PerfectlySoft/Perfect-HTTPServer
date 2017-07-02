@@ -43,6 +43,7 @@ final class HTTP2Response: HTTPResponse {
 		return h2Request.session?.clientSettings.maxFrameSize ?? 16384
 	}
 	var streamId: UInt32 { return h2Request.streamId }
+	var handlers: IndexingIterator<[RequestHandler]>?
 	
 	init(_ request: HTTP2Request) {
 		self.request = request
@@ -260,6 +261,14 @@ final class HTTP2Response: HTTPResponse {
 		push(final: true) {
 			ok in
 			self.removeRequest()
+		}
+	}
+	
+	func next() {
+		if let n = handlers?.next() {
+			n(request, self)
+		} else {
+			completed()
 		}
 	}
 	
