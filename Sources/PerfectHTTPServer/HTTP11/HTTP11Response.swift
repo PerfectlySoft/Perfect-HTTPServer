@@ -85,7 +85,11 @@ class HTTP11Response: HTTPResponse {
     }
 	
 	func next() {
-		
+		if let n = handlers?.next() {
+			n(request, self)
+		} else {
+			completed()
+		}
 	}
 	
 	func abort() {

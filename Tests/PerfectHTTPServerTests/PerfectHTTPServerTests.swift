@@ -249,9 +249,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			serverExpectation.fulfill()
 		}
 		Threading.sleep(seconds: 1.0)
+		let clienttcp = NetTCP()
 		Threading.dispatch {
 			do {
-				try NetTCP().connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+				try clienttcp.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					
 					guard let net = net else {
