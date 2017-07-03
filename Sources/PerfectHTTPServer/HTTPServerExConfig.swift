@@ -66,13 +66,29 @@ private func findFunc(_ named: String, suffixes: [String]) -> UnsafeMutableRawPo
 	return nil
 }
 
-private extension Route {
+fileprivate extension Route {
 	init(data: [String:Any]) throws {
 		guard let uri = data["uri"] as? String else {
 			throw PerfectError.apiError("Route data did not contain a uri")
 		}
+		guard let handler = try Route.handlerFrom(data) else {
+			throw PerfectError.apiError("No valid handler was provided \"handler\"=\(String(describing: data["handler"]))")
+		}
+		if let methodStr = data["method"] as? String {
+			self.init(method: HTTPMethod.from(string: methodStr.uppercased()), uri: uri, handler: handler)
+		} else if let methodsAry = data["methods"] as? [String] {
+			self.init(methods: methodsAry.map { HTTPMethod.from(string: $0.uppercased()) }, uri: uri, handler: handler)
+		} else {
+			self.init(uri: uri, handler: handler)
+		}
+	}
+	
+	static func handlerFrom(_ data: [String:Any]) throws -> RequestHandler? {
+		guard let value = data["handler"] else {
+			return nil
+		}
 		let handler: RequestHandler
-		switch data["handler"] {
+		switch value {
 		case let handlerName as String:
 			guard let tryHandler = try Route.lookupHandler(named: handlerName, data: data) else {
 				throw PerfectError.apiError("Route could not find handler \(handlerName). Ensure it is spelled correctly and fully qualified with its module name.")
@@ -85,16 +101,10 @@ private extension Route {
 		default:
 			throw PerfectError.apiError("No valid handler was provided \"handler\"=\(String(describing: data["handler"]))")
 		}
-		if let methodStr = data["method"] as? String {
-			self.init(method: HTTPMethod.from(string: methodStr.uppercased()), uri: uri, handler: handler)
-		} else if let methodsAry = data["methods"] as? [String] {
-			self.init(methods: methodsAry.map { HTTPMethod.from(string: $0.uppercased()) }, uri: uri, handler: handler)
-		} else {
-			self.init(uri: uri, handler: handler)
-		}
+		return handler
 	}
 	
-	private static func lookupHandler(named: String, data: [String:Any]) throws -> RequestHandler? {
+	static func lookupHandler(named: String, data: [String:Any]) throws -> RequestHandler? {
 		if let sym = findFunc(named, suffixes: ["FTP11PerfectHTTP11HTTPRequest_PS1_12HTTPResponse__T_",
 		                                        "FTP11PerfectHTTP11HTTPRequest_PS2_12HTTPResponse__T_"]) {
 			return try callWithData(sym, data: data)
@@ -102,7 +112,7 @@ private extension Route {
 		return nil
 	}
 	
-	private static func callWithData(_ ptr: UnsafeMutableRawPointer?, data: [String:Any]) throws -> RequestHandler? {
+	static func callWithData(_ ptr: UnsafeMutableRawPointer?, data: [String:Any]) throws -> RequestHandler? {
 		guard let ptr = ptr else {
 			return nil
 		}
@@ -120,8 +130,33 @@ private extension Route {
 }
 
 extension Routes {
-	init(data: [[String:Any]]) throws {
-		self.init(try data.map { try Route(data: $0) })
+	init(data children: [[String:Any]]) throws {
+		self.init()
+		try addChildren(children)
+	}
+	
+	init(data: [String:Any]) throws {
+		// baseUri (optional)
+		// handler (optional)
+		// children (required)
+		self.init(baseUri: (data["baseURI"] ?? data["baseUri"]) as? String ?? "",
+		          handler: try Route.handlerFrom(data))
+		guard let children = data["children"] as? [[String:Any]] else {
+			throw PerfectError.apiError("Routes requires \"children\" key/value.")
+		}
+		try addChildren(children)
+	}
+	
+	mutating func addChildren(_ children: [[String:Any]]) throws {
+		for item in children {
+			if let _ = item["uri"], let _ = item["handler"] {
+				add(try Route(data: item))
+			} else if let _ = item["children"] {
+				add(try Routes(data: item))
+			} else {
+				throw PerfectError.apiError("Unrecognized Routes item \(item).")
+			}
+		}
 	}
 }
 

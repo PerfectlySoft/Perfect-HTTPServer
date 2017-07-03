@@ -386,8 +386,11 @@ private extension HTTPServer.Server {
 		self.name = name
 		self.port = port
 		self.address = data["address"] as? String ?? "0.0.0.0"
-		self.routes = try Routes(data: data["routes"] as? [[String:Any]] ?? [])
-		
+		if let d = data["routes"] as? [[String:Any]] {
+			self.routes = try Routes(data: d)
+		} else {
+			self.routes = try Routes(data: data["routes"] as? [String:Any] ?? [:])
+		}
 		let filters = data["filters"] as? [[String:Any]] ?? []
 		self.requestFilters = try filtersFrom(data: filters)
 		self.responseFilters = try filtersFrom(data: filters)
