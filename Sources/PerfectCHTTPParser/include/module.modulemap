@@ -1,0 +1,5 @@
+module PerfectCHTTPParser {
+    header "http_parser.h"
+    link "PerfectCHTTPParser"
+    export *
+}

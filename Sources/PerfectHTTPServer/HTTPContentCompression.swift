@@ -16,7 +16,7 @@
 //
 
 import PerfectHTTP
-import CZlib
+import PerfectCZlib
 
 class ZlibStream {
 	var stream = z_stream()

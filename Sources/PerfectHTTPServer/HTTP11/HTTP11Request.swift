@@ -21,7 +21,7 @@ import PerfectNet
 import PerfectThread
 import PerfectLib
 import PerfectHTTP
-import CHTTPParser
+import PerfectCHTTPParser
 
 private let httpMaxHeadersSize = 1024 * 8
 

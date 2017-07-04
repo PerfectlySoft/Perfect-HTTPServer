@@ -9,7 +9,7 @@ import PerfectHTTP
 import PerfectLib
 import PerfectNet
 import Foundation
-import CZlib
+import PerfectCZlib
 
 // HERE BE DRAGONS
 private typealias ReturnsRequestHandlerGivenData = ([String:Any]) throws -> RequestHandler

@@ -22,13 +22,14 @@ import PackageDescription
 let package = Package(
 	name: "PerfectHTTPServer",
 	targets: [
-		Target(name: "CHTTPParser", dependencies: []),
-		Target(name: "CZlib", dependencies: []),
-		Target(name: "PerfectHTTPServer", dependencies: ["CHTTPParser", "CZlib"])
+		Target(name: "PerfectCHTTPParser", dependencies: []),
+		Target(name: "PerfectCZlib", dependencies: []),
+		Target(name: "PerfectHTTPServer", dependencies: ["PerfectCHTTPParser", "PerfectCZlib"])
 	],
 	dependencies: [
 		.Package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", versions: Version(2, 1, 15)..<Version(3, 0, 0)),
-		.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", versions: Version(2, 2, 2)..<Version(3, 0, 0))
+		.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", versions: Version(2, 2, 2)..<Version(3, 0, 0)),
+		.Package(url: "https://github.com/noppoMan/aws-sdk-swift.git", majorVersion: 0),
 	],
-	exclude: ["Sources/CZlib/examples", "Sources/CZlib/test", "Sources/CZlib/contrib"]
+	exclude: ["Sources/PerfectCZlib/examples", "Sources/PerfectCZlib/test", "Sources/PerfectCZlib/contrib"]
 )

@@ -1,0 +1,5 @@
+module PerfectCZlib {
+    header "czlib.h"
+    link "PerfectCZlib"
+    export *
+}
