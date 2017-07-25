@@ -87,9 +87,7 @@ public class HTTPServer: ServerInstance {
 	
 	/// Routing support
 	private var routes = Routes()
-	private lazy var routeNavigator: RouteNavigator? = {
-		return self.routes.navigator
-	}()
+	private var routeNavigator: RouteNavigator?
 	
 	public enum ALPNSupport: String {
 		case http11 = "http/1.1", http2 = "h2"
@@ -228,7 +226,6 @@ public class HTTPServer: ServerInstance {
 		if let compatRoutes = compatRoutes {
 			self.addRoutes(compatRoutes)
 		}
-//		self.routeNavigator = self.routes.navigator
 		
 		guard let sock = self.net else {
 			Log.terminal(message: "Server could not be started. Socket was not initialized.")
@@ -243,6 +240,7 @@ public class HTTPServer: ServerInstance {
 		
 		defer { sock.close() }
 		self.serverAddress = sock.localAddress?.host ?? ""
+		self.routeNavigator = self.routes.navigator
 		sock.forEachAccept {
 			[weak self] net in
 			guard let net = net else {
