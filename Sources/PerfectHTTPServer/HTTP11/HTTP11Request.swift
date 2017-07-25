@@ -168,8 +168,8 @@ class HTTP11Request: HTTPRequest {
 	var state = State.none
 	var lastHeaderName: String?
 	
-	static func getSelf(parser: UnsafeMutablePointer<http_parser>?) -> HTTP11Request? {
-		guard let d = parser?.pointee.data else { return nil }
+	static func getSelf(parser: UnsafeMutablePointer<http_parser>) -> HTTP11Request? {
+		guard let d = parser.pointee.data else { return nil }
 		return Unmanaged<HTTP11Request>.fromOpaque(d).takeUnretainedValue()
 	}
 	
@@ -178,76 +178,83 @@ class HTTP11Request: HTTPRequest {
 		
 		parserSettings.on_message_begin = {
 			parser -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserMessageBegin() ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserMessageBegin(parser) ?? 0)
 		}
 		
 		parserSettings.on_message_complete = {
 			parser -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserMessageComplete() ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserMessageComplete(parser) ?? 0)
 		}
 		
 		parserSettings.on_headers_complete = {
 			parser -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserHeadersComplete() ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserHeadersComplete(parser) ?? 0)
 		}
 		
 		parserSettings.on_header_field = {
 			(parser, chunk, length) -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserHeaderField(data: chunk, length: length) ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserHeaderField(parser, data: chunk, length: length) ?? 0)
 		}
 		
 		parserSettings.on_header_value = {
 			(parser, chunk, length) -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserHeaderValue(data: chunk, length: length) ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserHeaderValue(parser, data: chunk, length: length) ?? 0)
 		}
 		
 		parserSettings.on_body = {
 			(parser, chunk, length) -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserBody(data: chunk, length: length) ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserBody(parser, data: chunk, length: length) ?? 0)
 		}
 		
 		parserSettings.on_url = {
 			(parser, chunk, length) -> Int32 in
-			return Int32(HTTP11Request.getSelf(parser: parser)?.parserURL(data: chunk, length: length) ?? 0)
+			guard let parser = parser else { return 0 }
+			return Int32(HTTP11Request.getSelf(parser: parser)?.parserURL(parser, data: chunk, length: length) ?? 0)
 		}
 		http_parser_init(&parser, HTTP_REQUEST)
 		
 		self.parser.data = Unmanaged.passUnretained(self).toOpaque()
 	}
 	
-	func parserMessageBegin() -> Int {
-		self.enteringState(.messageBegin, data: nil, length: 0)
+	func parserMessageBegin(_ parser: UnsafePointer<http_parser>) -> Int {
+		self.enteringState(parser, .messageBegin, data: nil, length: 0)
 		return 0
 	}
 	
-	func parserMessageComplete() -> Int {
-		self.enteringState(.messageComplete, data: nil, length: 0)
+	func parserMessageComplete(_ parser: UnsafePointer<http_parser>) -> Int {
+		self.enteringState(parser, .messageComplete, data: nil, length: 0)
 		return 0
 	}
 	
-	func parserHeadersComplete() -> Int {
-		self.enteringState(.headersComplete, data: nil, length: 0)
+	func parserHeadersComplete(_ parser: UnsafePointer<http_parser>) -> Int {
+		self.enteringState(parser, .headersComplete, data: nil, length: 0)
 		return 0
 	}
 	
-	func parserURL(data: UnsafePointer<Int8>?, length: Int) -> Int {
-		self.enteringState(.url, data: data, length: length)
+	func parserURL(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
+		self.enteringState(parser, .url, data: data, length: length)
 		return 0
 	}
 	
-	func parserHeaderField(data: UnsafePointer<Int8>?, length: Int) -> Int {
-		self.enteringState(.headerField, data: data, length: length)
+	func parserHeaderField(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
+		self.enteringState(parser, .headerField, data: data, length: length)
 		return 0
 	}
 	
-	func parserHeaderValue(data: UnsafePointer<Int8>?, length: Int) -> Int {
-		self.enteringState(.headerValue, data: data, length: length)
+	func parserHeaderValue(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
+		self.enteringState(parser, .headerValue, data: data, length: length)
 		return 0
 	}
 	
-	func parserBody(data: UnsafePointer<Int8>?, length: Int) -> Int {
+	func parserBody(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
 		if self.state != .body {
-			self.leavingState()
+			self.leavingState(parser)
 			self.state = .body
 		}
 		if self.workingBuffer.count == 0 && self.mimes == nil {
@@ -271,9 +278,9 @@ class HTTP11Request: HTTPRequest {
 		return 0
 	}
 	
-	func enteringState(_ state: State, data: UnsafePointer<Int8>?, length: Int) {
+	func enteringState(_ parser: UnsafePointer<http_parser>, _ state: State, data: UnsafePointer<Int8>?, length: Int) {
 		if self.state != state {
-			self.leavingState()
+			self.leavingState(parser)
 			self.state = state
 		}
 		data?.withMemoryRebound(to: UInt8.self, capacity: length) {
@@ -344,17 +351,17 @@ class HTTP11Request: HTTPRequest {
 		return (pathComponents, queryString)
 	}
 	
-	func leavingState() {
+	func leavingState(_ parser: UnsafePointer<http_parser>) {
 		switch state {
 		case .url:
 			(self.pathComponents, self.queryString) = parseURI()
 			workingBuffer.removeAll()
 		case .headersComplete:
-			let methodId = parser.method
+			let methodId = parser.pointee.method
 			if let methodName = http_method_str(http_method(rawValue: methodId)) {
 				self.method = HTTPMethod.from(string: String(validatingUTF8: methodName) ?? "GET")
 			}
-			protocolVersion = (Int(parser.http_major), Int(parser.http_minor))
+			protocolVersion = (Int(parser.pointee.http_major), Int(parser.pointee.http_minor))
 			workingBuffer.removeAll()
 			if let expect = header(.expect), expect.lowercased() == "100-continue" {
 				// TODO: Should let headers be passed to filters and let them 
@@ -444,7 +451,7 @@ class HTTP11Request: HTTPRequest {
 		_ = UnsafePointer(b).withMemoryRebound(to: Int8.self, capacity: b.count) {
 			http_parser_execute(&parser, &parserSettings, $0, b.count)
 		}
-		let http_errno = self.parser.http_errno
+		let http_errno = parser.http_errno
 		guard HPE_HEADER_OVERFLOW.rawValue != http_errno else {
 			callback(.requestEntityTooLarge)
 			return false
