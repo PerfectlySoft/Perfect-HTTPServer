@@ -187,7 +187,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				return XCTAssert(false, "\(ok)")
 			}
 			XCTAssertEqual(connection.path, "/pathA/pathB/path%20c")
-			XCTAssertEqual(connection.pathComponents, ["pathA", "pathB", "path c"])
+			XCTAssertEqual(connection.pathComponents, ["/", "pathA", "pathB", "path c"])
 		})
 	}
 	
@@ -202,7 +202,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				return XCTAssert(false, "\(ok)")
 			}
 			XCTAssertEqual(connection.path, "/pathA/pathB/path%20c/")
-			XCTAssertEqual(connection.pathComponents, ["pathA", "pathB", "path c", ""])
+			XCTAssertEqual(connection.pathComponents, ["/", "pathA", "pathB", "path c", "/"])
 			XCTAssert(connection.param(name: "a") == "b")
 			XCTAssert(connection.param(name: "c") == "d e")
 			})
@@ -213,7 +213,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		let path = "/pathA/pathB//path%20c/"
 		connection.path = path
 		XCTAssertEqual(connection.path, "/pathA/pathB/path%20c/")
-		XCTAssertEqual(connection.pathComponents, ["pathA", "pathB", "path c", ""])
+		XCTAssertEqual(connection.pathComponents, ["/", "pathA", "pathB", "path c", "/"])
 	}
 	
 	func testSimpleHandler() {
@@ -280,7 +280,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							let str = UTF8Encoding.encode(bytes: bytes)
 							let splitted = str.characters.split(separator: "\r\n").map(String.init)
 							
-							XCTAssert(splitted.last == msg)
+							XCTAssertEqual(splitted.last, msg)
 							
 							endClient()
 						}
@@ -337,9 +337,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			serverExpectation.fulfill()
 		}
 		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
 		Threading.dispatch {
 			do {
-				try NetTCP().connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					
 					guard let net = net else {
@@ -432,9 +433,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			serverExpectation.fulfill()
 		}
 		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
 		Threading.dispatch {
 			do {
-				try NetTCP().connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					
 					guard let net = net else {
@@ -557,9 +559,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			serverExpectation.fulfill()
 		}
 		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
 		Threading.dispatch {
 			do {
-				try NetTCP().connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					
 					guard let net = net else {
@@ -686,9 +689,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			serverExpectation.fulfill()
 		}
 		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
 		Threading.dispatch {
 			do {
-				try NetTCP().connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					
 					guard let net = net else {
@@ -832,9 +836,10 @@ class PerfectHTTPServerTests: XCTestCase {
 			serverExpectation.fulfill()
 		}
 		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
 		Threading.dispatch {
 			do {
-				try NetTCP().connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					
 					guard let net = net else {
@@ -981,8 +986,88 @@ class PerfectHTTPServerTests: XCTestCase {
 		
 		waitForExpectations(timeout: 10000) {
 			_ in
-			configs.forEach { $0.terminate() }
+			configs.forEach { _ = try? $0.terminate().wait() }
 		}
+	}
+	
+	func testRoutingTrailingSlash() {
+		let port = 8282 as UInt16
+		var routes = Routes()
+		let badHandler = {
+			(_:HTTPRequest, resp:HTTPResponse) in
+			resp.completed(status: .internalServerError)
+		}
+		let goodHandler = {
+			(_:HTTPRequest, resp:HTTPResponse) in
+			resp.completed(status: .notFound)
+		}
+		routes.add(method: .get, uri: "/", handler: { _, _ in })
+		routes.add(method: .get, uri: "/test/", handler: goodHandler)
+		routes.add(method: .get, uri: "/**", handler: badHandler)
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
+		
+		let server = HTTPServer()
+		server.serverPort = port
+		server.addRoutes(routes)
+		
+		func endClient() {
+			server.stop()
+			clientExpectation.fulfill()
+		}
+		
+		Threading.dispatch {
+			do {
+				try server.start()
+			} catch PerfectError.networkError(let err, let msg) {
+				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+			} catch {
+				XCTAssert(false, "Error thrown: \(error)")
+			}
+			serverExpectation.fulfill()
+		}
+		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
+		Threading.dispatch {
+			do {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+					net in
+					guard let net = net else {
+						XCTAssert(false, "Could not connect to server")
+						return endClient()
+					}
+					let reqStr = "GET /test/ HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+					net.write(string: reqStr) {
+						count in
+						guard count == reqStr.utf8.count else {
+							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							return endClient()
+						}
+						Threading.sleep(seconds: 2.0)
+						net.readSomeBytes(count: 1024) {
+							bytes in
+							
+							guard let bytes = bytes, bytes.count > 0 else {
+								XCTAssert(false, "Could not read bytes from server")
+								return endClient()
+							}
+							let str = UTF8Encoding.encode(bytes: bytes)
+							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+							let compare = "HTTP/1.0 404 Not Found"
+							XCTAssert(splitted.first == compare)
+							endClient()
+						}
+					}
+				}
+			} catch {
+				XCTAssert(false, "Error thrown: \(error)")
+				endClient()
+			}
+		}
+		
+		self.waitForExpectations(timeout: 10000, handler: {
+			_ in
+		})
 	}
 	
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
@@ -994,18 +1079,19 @@ class PerfectHTTPServerTests: XCTestCase {
 			("testWebConnectionHeadersFolded", testWebConnectionHeadersFolded),
 			("testWebConnectionHeadersTooLarge", testWebConnectionHeadersTooLarge),
 			("testWebRequestQueryParam", testWebRequestQueryParam),
-			("testWebRequestCookie", testWebRequestCookie),
 			("testWebRequestPostParam", testWebRequestPostParam),
+			("testWebRequestCookie", testWebRequestCookie),
+			("testWebRequestPath1", testWebRequestPath1),
+			("testWebRequestPath2", testWebRequestPath2),
+			("testWebRequestPath3", testWebRequestPath3),
 			("testSimpleHandler", testSimpleHandler),
 			("testSimpleStreamingHandler", testSimpleStreamingHandler),
+			("testSlowClient", testSlowClient),
 			("testRequestFilters", testRequestFilters),
 			("testResponseFilters", testResponseFilters),
 			("testStreamingResponseFilters", testStreamingResponseFilters),
-			("testSlowClient", testSlowClient),
 			("testServerConf1", testServerConf1),
-			("testWebRequestPath1", testWebRequestPath1),
-			("testWebRequestPath2", testWebRequestPath2),
-			("testWebRequestPath3", testWebRequestPath3)
+			("testRoutingTrailingSlash", testRoutingTrailingSlash)
         ]
     }
 }

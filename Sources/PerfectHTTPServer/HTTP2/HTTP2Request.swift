@@ -27,15 +27,25 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	var method: HTTPMethod = .get
 	var path: String {
 		get {
-			return "/" + pathComponents.map { $0.stringByEncodingURL }.joined(separator: "/")
+			var accum = ""
+			var lastSlashExplicit = false
+			for p in pathComponents {
+				if p == "/" {
+					accum += p
+					lastSlashExplicit = true
+				} else {
+					if !lastSlashExplicit {
+						accum += "/"
+					}
+					accum += p.stringByEncodingURL
+					lastSlashExplicit = false
+				}
+			}
+			return accum
 		}
 		set {
-			var components = newValue.characters.split(separator: "/").map { String($0).stringByDecodingURL ?? "" }
-			if newValue.endsWithFilePathSeparator {
-				components.append("")
-			}
+			let components = newValue.filePathComponents.map { $0 == "/" ? "/" : $0.stringByDecodingURL ?? "" }
 			pathComponents = components
-			
 		}
 	}
 	var pathComponents = [String]()
@@ -320,7 +330,7 @@ extension HTTP2Request {
 		var state = ParseURLState.slash
 		var gen = pathBuffer.makeIterator()
 		var decoder = UTF8()
-		var pathComponents = [String]()
+		var pathComponents = ["/"]
 		var component = ""
 		var queryString = ""
 		
@@ -336,7 +346,7 @@ extension HTTP2Request {
 					case .slash:
 						if uchar == question {
 							state = .query
-							pathComponents.append("")
+							pathComponents.append("/")
 						} else if uchar != slash {
 							state = .component
 							component = String(Character(uchar))
@@ -357,7 +367,9 @@ extension HTTP2Request {
 				case .emptyInput, .error:
 					switch state {
 					case .slash:
-						pathComponents.append("")
+						if pathComponents.count > 1 {
+							pathComponents.append("/")
+						}
 					case .component:
 						pathComponents.append(component.stringByDecodingURL ?? "")
 					case .query:
@@ -366,9 +378,6 @@ extension HTTP2Request {
 					break loopy
 				}
 		} while true
-		if pathComponents.isEmpty || (pathComponents.count == 1 && pathComponents.first!.isEmpty) {
-			pathComponents = ["/"]
-		}
 		return (pathComponents, queryString)
 	}
 }
