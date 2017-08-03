@@ -325,7 +325,9 @@ class HTTP11Request: HTTPRequest {
 					case .slash:
 						if uchar == question {
 							state = .query
-							pathComponents.append("/")
+							if pathComponents.count > 1 {
+								pathComponents.append("/")
+							}
 						} else if uchar != slash {
 							state = .component
 							component = String(Character(uchar))

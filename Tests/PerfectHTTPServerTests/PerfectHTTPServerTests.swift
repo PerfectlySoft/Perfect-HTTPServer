@@ -216,6 +216,23 @@ class PerfectHTTPServerTests: XCTestCase {
 		XCTAssertEqual(connection.pathComponents, ["/", "pathA", "pathB", "path c", "/"])
 	}
 	
+	func testWebRequestPath4() {
+		let connection = ShimHTTPRequest()
+		let fullHeaders = "GET /?a=b&c=d%20e HTTP/1.1\r\nX-Foo: bar\r\nX-Bar: \r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n"
+		
+		XCTAssert(false == connection.didReadSomeBytes(Array(fullHeaders.utf8)) {
+			ok in
+			
+			guard case .ok = ok else {
+				return XCTAssert(false, "\(ok)")
+			}
+			XCTAssertEqual(connection.path, "/")
+			XCTAssertEqual(connection.pathComponents, ["/"])
+			XCTAssert(connection.param(name: "a") == "b")
+			XCTAssert(connection.param(name: "c") == "d e")
+			})
+	}
+	
 	func testSimpleHandler() {
 		let port = 8282 as UInt16
 		let msg = "Hello, world!"
@@ -1084,6 +1101,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			("testWebRequestPath1", testWebRequestPath1),
 			("testWebRequestPath2", testWebRequestPath2),
 			("testWebRequestPath3", testWebRequestPath3),
+			("testWebRequestPath4", testWebRequestPath4),
 			("testSimpleHandler", testSimpleHandler),
 			("testSimpleStreamingHandler", testSimpleStreamingHandler),
 			("testSlowClient", testSlowClient),
