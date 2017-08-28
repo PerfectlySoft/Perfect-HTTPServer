@@ -30,23 +30,39 @@ public struct TLSConfiguration {
 		"ECDHE-RSA-AES256-SHA",
 		"ECDHE-ECDSA-AES256-SHA"]
 	
-	public let certPath: String
-	public let keyPath: String?
+	public var certPath: String { return cert }
+	public var keyPath: String? { return key }
+	public let cert: String
+	public let key: String?
 	public let caCertPath: String?
 	public let certVerifyMode: OpenSSLVerifyMode?
 	public let cipherList: [String]
 	public let alpnSupport: [HTTPServer.ALPNSupport]
 	
-	public init(certPath: String, keyPath: String? = nil,
+	/// Initialize a new struct with the desired TLS settings.
+	/// The `cert` and `key` parameters can be either a file path or the raw PEM data.
+	public init(cert: String, key: String? = nil,
 	            caCertPath: String? = nil, certVerifyMode: OpenSSLVerifyMode? = nil,
 	            cipherList: [String] = TLSConfiguration.defaultCipherList,
 	            alpnSupport: [HTTPServer.ALPNSupport] = [.http11]) {
-		self.certPath = certPath
-		self.keyPath = keyPath
+		self.cert = cert
+		self.key = key
 		self.caCertPath = caCertPath
 		self.certVerifyMode = certVerifyMode
 		self.cipherList = cipherList
 		self.alpnSupport = alpnSupport
+	}
+	
+	public init(certPath: String, keyPath: String? = nil,
+	            caCertPath: String? = nil, certVerifyMode: OpenSSLVerifyMode? = nil,
+	            cipherList: [String] = TLSConfiguration.defaultCipherList,
+	            alpnSupport: [HTTPServer.ALPNSupport] = [.http11]) {
+		self.init(cert: certPath,
+		          key: keyPath,
+		          caCertPath: caCertPath,
+		          certVerifyMode: certVerifyMode,
+		          cipherList: cipherList,
+		          alpnSupport: alpnSupport)
 	}
 }
 

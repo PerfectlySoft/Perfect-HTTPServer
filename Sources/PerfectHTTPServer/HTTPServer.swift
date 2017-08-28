@@ -62,7 +62,6 @@ public class HTTPServer: ServerInstance {
 	/// This is important if utilizing the `HTTPRequest.serverName` property.
 	public var serverName = ""
 	public var ssl: certKeyPair?
-	public var sniSupport: [String:certKeyPair] = [:]
 	public var caCert: String?
 	public var certVerifyMode: OpenSSLVerifyMode?
 	public var cipherList = [
@@ -168,7 +167,6 @@ public class HTTPServer: ServerInstance {
 			let socket = NetTCPSSL()
 			try socket.bind(port: serverPort, address: serverAddress)
 			socket.cipherList = self.cipherList
-			
 			if let verifyMode = certVerifyMode,
 				let cert = caCert,
 				verifyMode != .sslVerifyNone {
@@ -178,22 +176,34 @@ public class HTTPServer: ServerInstance {
 					throw PerfectError.networkError(code, "Error setting clientCA : \(socket.errorStr(forCode: code))")
 				}
 			}
-			
-			guard socket.useCertificateChainFile(cert: cert) else {
-				let code = Int32(socket.errorCode())
-				throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+			let sourcePrefix = "-----BEGIN"
+			if cert.hasPrefix(sourcePrefix) {
+				guard socket.useCertificateChain(cert: cert) else {
+					let code = Int32(socket.errorCode())
+					throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+				}
+			} else {
+				guard socket.useCertificateChainFile(cert: cert) else {
+					let code = Int32(socket.errorCode())
+					throw PerfectError.networkError(code, "Error setting certificate chain file: \(socket.errorStr(forCode: code))")
+				}
 			}
-			guard socket.usePrivateKeyFile(cert: key) else {
-				let code = Int32(socket.errorCode())
-				throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+			if key.hasPrefix(sourcePrefix) {
+				guard socket.usePrivateKey(cert: key) else {
+					let code = Int32(socket.errorCode())
+					throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+				}
+			} else {
+				guard socket.usePrivateKeyFile(cert: key) else {
+					let code = Int32(socket.errorCode())
+					throw PerfectError.networkError(code, "Error setting private key file: \(socket.errorStr(forCode: code))")
+				}
 			}
 			guard socket.checkPrivateKey() else {
 				let code = Int32(socket.errorCode())
 				throw PerfectError.networkError(code, "Error validating private key file: \(socket.errorStr(forCode: code))")
 			}
-			
 			socket.enableALPN(protocols: self.alpnSupport.map { $0.rawValue })
-			
 			self.net = socket
 		} else {
 			let net = NetTCP()

@@ -22,14 +22,14 @@ class PerfectHTTPServerTests: XCTestCase {
 		let b = Bytes()
 		
 		let headers = [
-//			(":method", "POST"),
-//			(":scheme", "https"),
-//			(":path", "/3/device/00fc13adff785122b4ad28809a3420982341241421348097878e577c991de8f0"),
-//			("host", "api.development.push.apple.com"),
-//			("apns-id", "eabeae54-14a8-11e5-b60b-1697f925ec7b"),
-//			("apns-expiration", "0"),
-//			("apns-priority", "10"),
-//			("content-length", "33"),
+			(":method", "POST"),
+			(":scheme", "https"),
+			(":path", "/3/device/00fc13adff785122b4ad28809a3420982341241421348097878e577c991de8f0"),
+			("host", "api.development.push.apple.com"),
+			("apns-id", "eabeae54-14a8-11e5-b60b-1697f925ec7b"),
+			("apns-expiration", "0"),
+			("apns-priority", "10"),
+			("content-length", "33"),
 			("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/603.2.4 (KHTML, like Gecko) Version/10.1.1 Safari/603.2.4")]
 		do {
 			for (n, v) in headers {
