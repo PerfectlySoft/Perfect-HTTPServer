@@ -290,8 +290,15 @@ class HTTP11Request: HTTPRequest {
 	
 	func enteringState(_ parser: UnsafePointer<http_parser>, _ state: State, data: UnsafePointer<Int8>?, length: Int) {
 		if self.state != state {
-			self.leavingState(parser)
+			leavingState(parser)
 			self.state = state
+			if case .headersComplete = state,
+				let expect = header(.expect),
+				expect.lowercased() == "100-continue" {
+				// TODO: Should let headers be passed to filters and let them
+				// determine if request should continue or not
+				_ = connection.writeFully(bytes: Array("HTTP/1.1 100 Continue\r\n\r\n".utf8))
+			}
 		}
 		data?.withMemoryRebound(to: UInt8.self, capacity: length) {
 			data in
@@ -374,11 +381,6 @@ class HTTP11Request: HTTPRequest {
 			}
 			protocolVersion = (Int(parser.pointee.http_major), Int(parser.pointee.http_minor))
 			workingBuffer.removeAll()
-			if let expect = header(.expect), expect.lowercased() == "100-continue" {
-				// TODO: Should let headers be passed to filters and let them 
-				// determine if request should continue or not
-				_ = connection.writeFully(bytes: Array("HTTP/1.1 100 Continue\r\n\r\n".utf8))
-			}
 		case .headerField:
 			workingBuffer.append(0)
 			lastHeaderName = String(validatingUTF8: UnsafeMutableRawPointer(mutating: workingBuffer).assumingMemoryBound(to: Int8.self))
