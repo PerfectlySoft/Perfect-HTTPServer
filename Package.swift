@@ -23,12 +23,12 @@ let package = Package(
 	name: "PerfectHTTPServer",
 	targets: [
 		Target(name: "PerfectCHTTPParser", dependencies: []),
-		Target(name: "PerfectCZlib", dependencies: []),
-		Target(name: "PerfectHTTPServer", dependencies: ["PerfectCHTTPParser", "PerfectCZlib"])
+		Target(name: "PerfectHTTPServer", dependencies: ["PerfectCHTTPParser"])
 	],
 	dependencies: [
 		.Package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", majorVersion: 3),
-		.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", majorVersion: 3)
+		.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", majorVersion: 3),
+		.Package(url: "https://github.com/PerfectlySoft/Perfect-CZlib-src.git", majorVersion: 0)
 	],
-	exclude: ["Sources/PerfectCZlib/examples", "Sources/PerfectCZlib/test", "Sources/PerfectCZlib/contrib"]
+	exclude: []
 )
