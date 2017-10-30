@@ -1,3 +1,4 @@
+// swift-tools-version:4.0
 //
 //  Package.swift
 //  PerfectHTTPServer
@@ -21,14 +22,17 @@ import PackageDescription
 
 let package = Package(
 	name: "PerfectHTTPServer",
-	targets: [
-		Target(name: "PerfectCHTTPParser", dependencies: []),
-		Target(name: "PerfectHTTPServer", dependencies: ["PerfectCHTTPParser"])
+	products: [
+		.library(name: "PerfectHTTPServer", targets: ["PerfectHTTPServer"])
 	],
 	dependencies: [
-		.Package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", majorVersion: 3),
-		.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", majorVersion: 3),
-		.Package(url: "https://github.com/PerfectlySoft/Perfect-CZlib-src.git", majorVersion: 0)
+		.package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", from: "3.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", from: "3.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-CZlib-src.git", from: "0.0.0")
 	],
-	exclude: []
+	targets: [
+		.target(name: "PerfectCHTTPParser", dependencies: []),
+		.target(name: "PerfectHTTPServer", dependencies: ["PerfectCHTTPParser", "PerfectNet", "PerfectHTTP", "PerfectCZlib"]),
+		.testTarget(name: "PerfectHTTPServerTests", dependencies: ["PerfectHTTPServer"])
+	]
 )
