@@ -269,7 +269,7 @@ class HTTP11Request: HTTPRequest {
 		}
 		if self.workingBuffer.count == 0 && self.mimes == nil {
 			if let contentType = self.contentType,
-				contentType.characters.starts(with: "multipart/form-data".characters) {
+				contentType.starts(with: "multipart/form-data") {
 				self.mimes = MimeReader(contentType)
 			}
 		}
@@ -483,7 +483,7 @@ class HTTP11Request: HTTPRequest {
 	func putPostData(_ b: [UInt8]) {
 		if self.workingBuffer.count == 0 && self.mimes == nil {
 			if let contentType = self.contentType,
-				contentType.characters.starts(with: "multipart/form-data".characters) {
+				contentType.starts(with: "multipart/form-data") {
 				self.mimes = MimeReader(contentType)
 			}
 		}
@@ -495,8 +495,8 @@ class HTTP11Request: HTTPRequest {
 	}
 	
 	func deFormURLEncoded(string: String) -> [(String, String)] {
-		return string.characters.split(separator: "&").map(String.init).flatMap {
-			let d = $0.characters.split(separator: "=", maxSplits: 1).flatMap { String($0).stringByDecodingURL }
+		return string.split(separator: "&").map(String.init).flatMap {
+			let d = $0.split(separator: "=", maxSplits: 1).flatMap { String($0).stringByDecodingURL }
 			if d.count == 2 { return (d[0], d[1]) }
 			if d.count == 1 { return (d[0], "") }
 			return nil

@@ -301,7 +301,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 			let headerName = HTTPRequestHeader.Name.fromStandard(name: n)
 			if headerName == .contentType {
 				let contentType = String(validatingUTF8: value) ?? ""
-				if contentType.characters.starts(with: "multipart/form-data".characters) {
+				if contentType.starts(with: "multipart/form-data") {
 					self.mimes = MimeReader(contentType)
 				}
 			}
@@ -315,8 +315,8 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 
 extension HTTP2Request {
 	func deFormURLEncoded(string: String) -> [(String, String)] {
-		return string.characters.split(separator: "&").map(String.init).flatMap {
-			let d = $0.characters.split(separator: "=", maxSplits: 1).flatMap { String($0).stringByDecodingURL }
+		return string.split(separator: "&").map(String.init).flatMap {
+			let d = $0.split(separator: "=", maxSplits: 1).flatMap { String($0).stringByDecodingURL }
 			if d.count == 2 { return (d[0], d[1]) }
 			if d.count == 1 { return (d[0], "") }
 			return nil
