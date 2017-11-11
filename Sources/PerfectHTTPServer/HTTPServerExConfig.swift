@@ -45,7 +45,7 @@ private let symbolPrefixes = ["_TF", "_TFV", "_TZFC", "_TZFO", "_TZFOV", "_TZFV"
 private let exeHandle = dlopen(nil, RTLD_NOW)
 
 private func findFunc(_ named: String, suffixes: [String]) -> UnsafeMutableRawPointer? {
-	let names = named.characters.split(separator: ".")
+	let names = named.split(separator: ".")
 	let preName = names.map { "\($0.count)\(String($0))" }.joined()
 	let someDataSuffixes = ["FzT4dataGVs10DictionarySSP___", "fzT4dataGVs10DictionarySSP___"]
 	

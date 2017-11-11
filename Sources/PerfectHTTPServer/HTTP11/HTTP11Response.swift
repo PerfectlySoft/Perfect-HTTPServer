@@ -17,7 +17,7 @@
 //===----------------------------------------------------------------------===//
 //
 
-#if os(OSX)
+#if os(macOS) || os(iOS)
 	import Darwin
 #else
 	import SwiftGlibc
