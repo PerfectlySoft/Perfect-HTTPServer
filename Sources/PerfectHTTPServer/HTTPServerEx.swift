@@ -164,11 +164,11 @@ public extension HTTPServer {
 		public static func server(name: String, port: Int, documentRoot root: String,
 		                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 		                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) -> Server {
-			let routes = Routes([.init(method: .get, uri: "/**", handler: {
-				req, resp in
-				StaticFileHandler(documentRoot: root, allowResponseFilters: 0 < (requestFilters.count + responseFilters.count))
-					.handleRequest(request: req, response: resp)
-				})])
+			let sfh = StaticFileHandler(documentRoot: root, allowResponseFilters: 0 < (requestFilters.count + responseFilters.count))
+			let routes = Routes([
+				.init(method: .get, uri: "/**", handler: sfh.handleRequest),
+				.init(method: .head, uri: "/**", handler: sfh.handleRequest)
+				])
 			return HTTPServer.Server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)
 		}
 		
