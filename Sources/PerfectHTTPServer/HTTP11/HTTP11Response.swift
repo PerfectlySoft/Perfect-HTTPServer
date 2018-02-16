@@ -33,7 +33,7 @@ class HTTP11Response: HTTPResponse {
     var bodyBytes = [UInt8]()
     var bodyPrefix = [UInt8]()
     var headers: AnyIterator<(HTTPResponseHeader.Name, String)> {
-        var g = self.headerStore.makeIterator()
+        var g = headerStore.makeIterator()
         return AnyIterator<(HTTPResponseHeader.Name, String)> {
             g.next()
         }
@@ -53,17 +53,17 @@ class HTTP11Response: HTTPResponse {
         // http 1.1 is keep-alive unless otherwise noted
         // http 1.0 is keep-alive if specifically noted
         // check header first
-        if let connection = self.request.header(.connection) {
+        if let connection = request.header(.connection) {
             if connection.lowercased() == "keep-alive" {
                 return true
             }
             return false
         }
-        return self.isHTTP11
+        return isHTTP11
     }()
     
     var isHTTP11: Bool {
-        let version = self.request.protocolVersion
+        let version = request.protocolVersion
         return version.0 == 1 && version.1 == 1
     }
 	
@@ -73,13 +73,13 @@ class HTTP11Response: HTTPResponse {
         self.request = request
 		self.filters = filters
         let net = request.connection
-        self.completedCallback = {
+        completedCallback = {
             net.close()
         }
     }
     
     func completed() {
-        if let cb = self.completedCallback {
+        if let cb = completedCallback {
             cb()
         }
     }
@@ -93,8 +93,8 @@ class HTTP11Response: HTTPResponse {
 	}
 	
 	func abort() {
-		self.completedCallback = nil
-		self.connection.close()
+		completedCallback = nil
+		connection.close()
 	}
     
     func header(_ named: HTTPResponseHeader.Name) -> String? {
@@ -127,12 +127,12 @@ class HTTP11Response: HTTPResponse {
     }
 	
     func flush(callback: @escaping (Bool) -> ()) {
-		if let _ = self.filters {
+		if let _ = filters {
 			// !FIX! this needs an API change for response filters to let them know 
 			// when a call is the last
-			self.request.scratchPad["_flushing_"] = true
+			request.scratchPad["_flushing_"] = true
 		}
-        self.push {
+        push {
             ok in
             guard ok else {
                 return callback(false)
@@ -148,8 +148,10 @@ class HTTP11Response: HTTPResponse {
     func pushHeaders(callback: @escaping (Bool) -> ()) {
         wroteHeaders = true
         if isKeepAlive {
-            addHeader(.connection, value: "Keep-Alive")
-        }
+            addHeader(.connection, value: "keep-alive")
+		} else {
+			addHeader(.connection, value: "close")
+		}
         if isStreaming {
             addHeader(.transferEncoding, value: "chunked")
         } else if nil == header(.contentLength) {
@@ -196,7 +198,7 @@ class HTTP11Response: HTTPResponse {
 		}
 		responseString.append("\r\n")
 		bodyPrefix = Array(responseString.utf8)
-		self.push(callback: callback)
+		push(callback: callback)
 	}
 	
 	func filterBodyBytes(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: ([UInt8]) -> ()) {
@@ -228,8 +230,8 @@ class HTTP11Response: HTTPResponse {
 	}
 	
 	func finishFilterBodyBytes(callback: (_ bodyBytes: [UInt8]) -> ()) {
-		let bytes = self.bodyBytes
-		self.bodyBytes = []
+		let bytes = bodyBytes
+		bodyBytes = []
 		callback(bytes)
 	}
 	
@@ -260,7 +262,7 @@ class HTTP11Response: HTTPResponse {
 		}
 		let hexString = "\(String(bodyCount, radix: 16, uppercase: true))\r\n"
 		let sendA = Array(hexString.utf8)
-		self.pushNonStreamed(bytes: sendA) {
+		pushNonStreamed(bytes: sendA) {
 			ok in
 			guard ok else {
 				return self.abort()

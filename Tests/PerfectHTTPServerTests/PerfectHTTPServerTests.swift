@@ -386,6 +386,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
+										   "Connection: close",
 							               "Transfer-Encoding: chunked",
 							               "",
 							               "1",
@@ -738,6 +739,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
+										   "Connection: close",
 							               "Content-Length: 6",
 							               "X-Custom: Value",
 							               "",
@@ -885,6 +887,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
+										   "Connection: close",
 							               "Transfer-Encoding: chunked",
 							               "X-Custom: Value",
 							               "",
