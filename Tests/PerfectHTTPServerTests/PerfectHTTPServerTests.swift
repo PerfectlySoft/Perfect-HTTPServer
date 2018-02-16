@@ -295,7 +295,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							}
 							
 							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.characters.split(separator: "\r\n").map(String.init)
+							let splitted = str.split(separator: "\r\n").map(String.init)
 							
 							XCTAssertEqual(splitted.last, msg)
 							
@@ -383,7 +383,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							}
 							
 							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
 										   "Connection: close",
@@ -485,7 +485,7 @@ class PerfectHTTPServerTests: XCTestCase {
 									return endClient()
 								}
 								let str = UTF8Encoding.encode(bytes: bytes)
-								let splitted = str.characters.split(separator: "\r\n").map(String.init)
+								let splitted = str.split(separator: "\r\n").map(String.init)
 								XCTAssert(splitted.last == msg)
 								endClient()
 							}
@@ -736,7 +736,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							}
 							
 							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
 										   "Connection: close",
@@ -884,7 +884,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							}
 							
 							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
 										   "Connection: close",
@@ -1072,7 +1072,7 @@ class PerfectHTTPServerTests: XCTestCase {
 								return endClient()
 							}
 							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.characters.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = "HTTP/1.0 404 Not Found"
 							XCTAssert(splitted.first == compare)
 							endClient()
