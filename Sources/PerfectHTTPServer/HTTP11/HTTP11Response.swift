@@ -149,8 +149,6 @@ class HTTP11Response: HTTPResponse {
         wroteHeaders = true
         if isKeepAlive {
             addHeader(.connection, value: "keep-alive")
-		} else {
-			addHeader(.connection, value: "close")
 		}
         if isStreaming {
             addHeader(.transferEncoding, value: "chunked")

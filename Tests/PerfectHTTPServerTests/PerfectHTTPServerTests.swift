@@ -59,7 +59,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			
 		}
 		catch {
-			XCTAssert(false, "Exception \(error)")
+			XCTFail("Exception \(error)")
 		}
 	}
 	
@@ -71,7 +71,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		XCTAssert(false == connection.didReadSomeBytes(UTF8Encoding.decode(string: fullHeaders)) {
 			ok in
 			guard case .ok = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			XCTAssertTrue(connection.header(.custom(name: "X-Foo")) == "bar", "\(connection.headers)")
 			XCTAssertTrue(connection.header(.custom(name: "X-Bar")) == "", "\(connection.headers)")
@@ -88,7 +88,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .ok = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			XCTAssertTrue(connection.header(.custom(name: "x-foo")) == "bar", "\(connection.headers)")
 			XCTAssertTrue(connection.header(.custom(name: "x-bar")) == "", "\(connection.headers)")
@@ -105,7 +105,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .badRequest = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 		})
 	}
@@ -119,7 +119,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .ok = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			let wasFoldedValue = connection.header(.custom(name: "x-foo"))
 			XCTAssertTrue(wasFoldedValue == "bar bar", "\(connection.headers)")
@@ -141,7 +141,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .requestEntityTooLarge = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			XCTAssert(true)
 		})
@@ -184,7 +184,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .ok = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			XCTAssertEqual(connection.path, "/pathA/pathB/path%20c")
 			XCTAssertEqual(connection.pathComponents, ["/", "pathA", "pathB", "path c"])
@@ -199,7 +199,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .ok = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			XCTAssertEqual(connection.path, "/pathA/pathB/path%20c/")
 			XCTAssertEqual(connection.pathComponents, ["/", "pathA", "pathB", "path c", "/"])
@@ -224,7 +224,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			ok in
 			
 			guard case .ok = ok else {
-				return XCTAssert(false, "\(ok)")
+				return XCTFail("\(ok)")
 			}
 			XCTAssertEqual(connection.path, "/")
 			XCTAssertEqual(connection.pathComponents, ["/"])
@@ -259,9 +259,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -273,7 +273,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					net in
 					
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
@@ -281,7 +281,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						count in
 						
 						guard count == reqStr.utf8.count else {
-							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 							return endClient()
 						}
 						
@@ -290,7 +290,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							bytes in
 							
 							guard let bytes = bytes, bytes.count > 0 else {
-								XCTAssert(false, "Could not read bytes from server")
+								XCTFail("Could not read bytes from server")
 								return endClient()
 							}
 							
@@ -304,7 +304,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					}
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
@@ -347,9 +347,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -361,7 +361,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					net in
 					
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
@@ -369,7 +369,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						count in
 						
 						guard count == reqStr.utf8.count else {
-							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 							return endClient()
 						}
 						
@@ -378,7 +378,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							bytes in
 							
 							guard let bytes = bytes, bytes.count > 0 else {
-								XCTAssert(false, "Could not read bytes from server")
+								XCTFail("Could not read bytes from server")
 								return endClient()
 							}
 							
@@ -386,7 +386,6 @@ class PerfectHTTPServerTests: XCTestCase {
 							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
-										   "Connection: close",
 							               "Transfer-Encoding: chunked",
 							               "",
 							               "1",
@@ -406,7 +405,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					}
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
@@ -444,9 +443,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -458,7 +457,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					net in
 					
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					var reqIt = Array("GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n".utf8).makeIterator()
@@ -468,7 +467,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							net.write(bytes: a) {
 								wrote in
 								guard 1 == wrote else {
-									XCTAssert(false, "Could not write request \(wrote) != \(1)")
+									XCTFail("Could not write request \(wrote) != \(1)")
 									return endClient()
 								}
 								Threading.sleep(seconds: 0.5)
@@ -481,7 +480,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							net.readSomeBytes(count: 1024) {
 								bytes in
 								guard let bytes = bytes, bytes.count > 0 else {
-									XCTAssert(false, "Could not read bytes from server")
+									XCTFail("Could not read bytes from server")
 									return endClient()
 								}
 								let str = UTF8Encoding.encode(bytes: bytes)
@@ -494,7 +493,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					pushChar()
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
@@ -531,7 +530,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		}
 		struct Filter3: HTTPRequestFilter {
 			func filter(request: HTTPRequest, response: HTTPResponse, callback: (HTTPRequestFilterResult) -> ()) {
-				XCTAssert(false, "This filter should be skipped")
+				XCTFail("This filter should be skipped")
 				callback(.continue(request, response))
 			}
 		}
@@ -548,7 +547,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		var routes = Routes()
 		routes.add(method: .get, uri: "/", handler: {
 				request, response in
-				XCTAssert(false, "This handler should not execute")
+				XCTFail("This handler should not execute")
 				response.addHeader(.contentType, value: "text/plain")
 				response.appendBody(string: msg)
 				response.completed()
@@ -570,9 +569,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -584,7 +583,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					net in
 					
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
@@ -592,7 +591,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						count in
 						
 						guard count == reqStr.utf8.count else {
-							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 							return endClient()
 						}
 						
@@ -601,7 +600,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							bytes in
 							
 							guard let bytes = bytes, bytes.count > 0 else {
-								XCTAssert(false, "Could not read bytes from server")
+								XCTFail("Could not read bytes from server")
 								return endClient()
 							}
 							
@@ -610,7 +609,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					}
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
@@ -663,7 +662,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				callback(.continue)
 			}
 			func filterBody(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
-				XCTAssert(false, "This should not execute")
+				XCTFail("This should not execute")
 				callback(.done)
 			}
 		}
@@ -700,9 +699,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -714,7 +713,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					net in
 					
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
@@ -722,7 +721,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						count in
 						
 						guard count == reqStr.utf8.count else {
-							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 							return endClient()
 						}
 						
@@ -731,7 +730,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							bytes in
 							
 							guard let bytes = bytes, bytes.count > 0 else {
-								XCTAssert(false, "Could not read bytes from server")
+								XCTFail("Could not read bytes from server")
 								return endClient()
 							}
 							
@@ -739,7 +738,6 @@ class PerfectHTTPServerTests: XCTestCase {
 							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
-										   "Connection: close",
 							               "Content-Length: 6",
 							               "X-Custom: Value",
 							               "",
@@ -754,7 +752,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					}
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
@@ -806,7 +804,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				callback(.continue)
 			}
 			func filterBody(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
-				XCTAssert(false, "This should not execute")
+				XCTFail("This should not execute")
 				callback(.done)
 			}
 		}
@@ -848,9 +846,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -862,7 +860,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					net in
 					
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
@@ -870,7 +868,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						count in
 						
 						guard count == reqStr.utf8.count else {
-							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 							return endClient()
 						}
 						
@@ -879,7 +877,7 @@ class PerfectHTTPServerTests: XCTestCase {
 							bytes in
 							
 							guard let bytes = bytes, bytes.count > 0 else {
-								XCTAssert(false, "Could not read bytes from server")
+								XCTFail("Could not read bytes from server")
 								return endClient()
 							}
 							
@@ -887,7 +885,6 @@ class PerfectHTTPServerTests: XCTestCase {
 							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = ["HTTP/1.0 200 OK",
 							               "Content-Type: text/plain",
-										   "Connection: close",
 							               "Transfer-Encoding: chunked",
 							               "X-Custom: Value",
 							               "",
@@ -908,7 +905,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					}
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
@@ -958,7 +955,7 @@ class PerfectHTTPServerTests: XCTestCase {
 		do {
 			configs = try HTTPServer.launch(wait: false, configurationData: confData)
 		} catch {
-			return XCTAssert(false, "Error: \(error)")
+			return XCTFail("Error: \(error)")
 		}
 		
 		let clientExpectation = self.expectation(description: "client")
@@ -969,7 +966,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				net in
 				
 				guard let net = net else {
-					XCTAssert(false, "Could not connect to server")
+					XCTFail("Could not connect to server")
 					return clientExpectation.fulfill()
 				}
 				let reqStr = "GET /test.html HTTP/1.1\r\nHost: localhost:\(port)\r\nAccept-Encoding: gzip, deflate\r\n\r\n"
@@ -977,7 +974,7 @@ class PerfectHTTPServerTests: XCTestCase {
 					count in
 					
 					guard count == reqStr.utf8.count else {
-						XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count) \(String(validatingUTF8: strerror(errno)) ?? "no error msg")")
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count) \(String(validatingUTF8: strerror(errno)) ?? "no error msg")")
 						return clientExpectation.fulfill()
 					}
 					
@@ -986,7 +983,7 @@ class PerfectHTTPServerTests: XCTestCase {
 						bytes in
 						
 						guard let bytes = bytes, bytes.count > 0 else {
-							XCTAssert(false, "Could not read bytes from server")
+							XCTFail("Could not read bytes from server")
 							return clientExpectation.fulfill()
 						}
 						
@@ -1000,7 +997,7 @@ class PerfectHTTPServerTests: XCTestCase {
 				}
 			}
 		} catch {
-			XCTAssert(false, "Error thrown: \(error)")
+			XCTFail("Error thrown: \(error)")
 			clientExpectation.fulfill()
 		}
 		
@@ -1040,9 +1037,9 @@ class PerfectHTTPServerTests: XCTestCase {
 			do {
 				try server.start()
 			} catch PerfectError.networkError(let err, let msg) {
-				XCTAssert(false, "Network error thrown: \(err) \(msg)")
+				XCTFail("Network error thrown: \(err) \(msg)")
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 			}
 			serverExpectation.fulfill()
 		}
@@ -1053,14 +1050,14 @@ class PerfectHTTPServerTests: XCTestCase {
 				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
 					net in
 					guard let net = net else {
-						XCTAssert(false, "Could not connect to server")
+						XCTFail("Could not connect to server")
 						return endClient()
 					}
 					let reqStr = "GET /test/ HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
 					net.write(string: reqStr) {
 						count in
 						guard count == reqStr.utf8.count else {
-							XCTAssert(false, "Could not write request \(count) != \(reqStr.utf8.count)")
+							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 							return endClient()
 						}
 						Threading.sleep(seconds: 2.0)
@@ -1068,19 +1065,19 @@ class PerfectHTTPServerTests: XCTestCase {
 							bytes in
 							
 							guard let bytes = bytes, bytes.count > 0 else {
-								XCTAssert(false, "Could not read bytes from server")
+								XCTFail("Could not read bytes from server")
 								return endClient()
 							}
 							let str = UTF8Encoding.encode(bytes: bytes)
 							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
 							let compare = "HTTP/1.0 404 Not Found"
-							XCTAssert(splitted.first == compare)
+							XCTAssertEqual(splitted.first, compare)
 							endClient()
 						}
 					}
 				}
 			} catch {
-				XCTAssert(false, "Error thrown: \(error)")
+				XCTFail("Error thrown: \(error)")
 				endClient()
 			}
 		}
