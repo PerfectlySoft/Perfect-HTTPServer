@@ -71,7 +71,7 @@ class HTTP11Request: HTTPRequest {
 	var queryString = ""
 	
 	lazy var queryParams: [(String, String)] = {
-		return self.deFormURLEncoded(string: self.queryString)
+		return deFormURLEncoded(string: queryString)
 	}()
 	
 	var protocolVersion = (1, 0)
@@ -95,7 +95,7 @@ class HTTP11Request: HTTPRequest {
 	private var headerStore = Dictionary<HTTPRequestHeader.Name, [UInt8]>()
 	
 	var headers: AnyIterator<(HTTPRequestHeader.Name, String)> {
-		var g = self.headerStore.makeIterator()
+		var g = headerStore.makeIterator()
 		return AnyIterator<(HTTPRequestHeader.Name, String)> {
 			guard let n = g.next() else {
 				return nil
@@ -106,10 +106,10 @@ class HTTP11Request: HTTPRequest {
 	
 	lazy var postParams: [(String, String)] = {
 		
-		if let mime = self.mimes {
+		if let mime = mimes {
 			return mime.bodySpecs.filter { $0.file == nil }.map { ($0.fieldName, $0.fieldValue) }
-		} else if let bodyString = self.postBodyString {
-			return self.deFormURLEncoded(string: bodyString)
+		} else if let bodyString = postBodyString {
+			return deFormURLEncoded(string: bodyString)
 		}
 		return [(String, String)]()
 	}()
@@ -152,14 +152,14 @@ class HTTP11Request: HTTPRequest {
 	var mimes: MimeReader?
 	
 	var contentType: String? {
-		guard let v = self.headerStore[.contentType] else {
+		guard let v = headerStore[.contentType] else {
 			return nil
 		}
 		return UTF8Encoding.encode(bytes: v)
 	}
 	
 	lazy var contentLength: Int = {
-		guard let cl = self.headerStore[.contentLength] else {
+		guard let cl = headerStore[.contentLength] else {
 			return 0
 		}
 		let conv = UTF8Encoding.encode(bytes: cl)
@@ -229,61 +229,61 @@ class HTTP11Request: HTTPRequest {
 		}
 		http_parser_init(&parser, HTTP_REQUEST)
 		
-		self.parser.data = Unmanaged.passUnretained(self).toOpaque()
+		parser.data = Unmanaged.passUnretained(self).toOpaque()
 	}
 	
 	func parserMessageBegin(_ parser: UnsafePointer<http_parser>) -> Int {
-		self.enteringState(parser, .messageBegin, data: nil, length: 0)
+		enteringState(parser, .messageBegin, data: nil, length: 0)
 		return 0
 	}
 	
 	func parserMessageComplete(_ parser: UnsafePointer<http_parser>) -> Int {
-		self.enteringState(parser, .messageComplete, data: nil, length: 0)
+		enteringState(parser, .messageComplete, data: nil, length: 0)
 		return 0
 	}
 	
 	func parserHeadersComplete(_ parser: UnsafePointer<http_parser>) -> Int {
-		self.enteringState(parser, .headersComplete, data: nil, length: 0)
+		enteringState(parser, .headersComplete, data: nil, length: 0)
 		return 0
 	}
 	
 	func parserURL(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
-		self.enteringState(parser, .url, data: data, length: length)
+		enteringState(parser, .url, data: data, length: length)
 		return 0
 	}
 	
 	func parserHeaderField(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
-		self.enteringState(parser, .headerField, data: data, length: length)
+		enteringState(parser, .headerField, data: data, length: length)
 		return 0
 	}
 	
 	func parserHeaderValue(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
-		self.enteringState(parser, .headerValue, data: data, length: length)
+		enteringState(parser, .headerValue, data: data, length: length)
 		return 0
 	}
 	
 	func parserBody(_ parser: UnsafePointer<http_parser>, data: UnsafePointer<Int8>?, length: Int) -> Int {
-		if self.state != .body {
-			self.leavingState(parser)
-			self.state = .body
+		if state != .body {
+			leavingState(parser)
+			state = .body
 		}
-		if self.workingBuffer.count == 0 && self.mimes == nil {
-			if let contentType = self.contentType,
+		if workingBuffer.count == 0 && mimes == nil {
+			if let contentType = contentType,
 				contentType.starts(with: "multipart/form-data") {
-				self.mimes = MimeReader(contentType)
+				mimes = MimeReader(contentType)
 			}
 		}
 		data?.withMemoryRebound(to: UInt8.self, capacity: length) {
 			data in
 			for i in 0..<length {
-				self.workingBuffer.append(data[i])
+				workingBuffer.append(data[i])
 			}
 		}
 		if let mimes = self.mimes {
 			defer {
-				self.workingBuffer.removeAll()
+				workingBuffer.removeAll()
 			}
-			mimes.addToBuffer(bytes: self.workingBuffer)
+			mimes.addToBuffer(bytes: workingBuffer)
 		}
 		return 0
 	}
@@ -372,12 +372,12 @@ class HTTP11Request: HTTPRequest {
 	func leavingState(_ parser: UnsafePointer<http_parser>) {
 		switch state {
 		case .url:
-			(self.pathComponents, self.queryString) = parseURI()
+			(pathComponents, queryString) = parseURI()
 			workingBuffer.removeAll()
 		case .headersComplete:
 			let methodId = parser.pointee.method
 			if let methodName = http_method_str(http_method(rawValue: methodId)) {
-				self.method = HTTPMethod.from(string: String(validatingUTF8: methodName) ?? "GET")
+				method = HTTPMethod.from(string: String(validatingUTF8: methodName) ?? "GET")
 			}
 			protocolVersion = (Int(parser.pointee.http_major), Int(parser.pointee.http_minor))
 			workingBuffer.removeAll()
@@ -386,8 +386,8 @@ class HTTP11Request: HTTPRequest {
 			lastHeaderName = String(validatingUTF8: UnsafeMutableRawPointer(mutating: workingBuffer).assumingMemoryBound(to: Int8.self))
 			workingBuffer.removeAll()
 		case .headerValue:
-			if let name = self.lastHeaderName {
-				setHeader(named: name, value: self.workingBuffer)
+			if let name = lastHeaderName {
+				setHeader(named: name, value: workingBuffer)
 			}
 			lastHeaderName = nil
 			workingBuffer.removeAll()
@@ -409,7 +409,7 @@ class HTTP11Request: HTTPRequest {
 	
 	func addHeader(_ named: HTTPRequestHeader.Name, value: String) {
 		guard let existing = headerStore[named] else {
-			self.headerStore[named] = [UInt8](value.utf8)
+			headerStore[named] = [UInt8](value.utf8)
 			return
 		}
 		let valueBytes = [UInt8](value.utf8)
@@ -419,7 +419,7 @@ class HTTP11Request: HTTPRequest {
 		} else {
 			newValue = existing + ", ".utf8 + valueBytes
 		}
-		self.headerStore[named] = newValue
+		headerStore[named] = newValue
 	}
 	
 	func setHeader(_ named: HTTPRequestHeader.Name, value: String) {
@@ -431,9 +431,12 @@ class HTTP11Request: HTTPRequest {
 	}
 	
 	func readRequest(callback: @escaping StatusCallback) {
-		self.connection.readSomeBytes(count: httpReadSize) {
+		connection.readSomeBytes(count: httpReadSize) {
 			b in
-			if let b = b, b.count > 0 {
+			guard let b = b else { // disconnection while reading
+				return callback(.requestTimeout)
+			}
+			if !b.isEmpty {
 				if self.didReadSomeBytes(b, callback: callback) {
 					if b.count == httpReadSize {
 						Threading.dispatch {
@@ -474,7 +477,7 @@ class HTTP11Request: HTTPRequest {
 			callback(.badRequest)
 			return false
 		}
-		if self.state == .messageComplete {
+		if state == .messageComplete {
 			callback(.ok)
 			return false
 		}
@@ -482,16 +485,16 @@ class HTTP11Request: HTTPRequest {
 	}
 	
 	func putPostData(_ b: [UInt8]) {
-		if self.workingBuffer.count == 0 && self.mimes == nil {
-			if let contentType = self.contentType,
+		if workingBuffer.count == 0 && mimes == nil {
+			if let contentType = contentType,
 				contentType.starts(with: "multipart/form-data") {
-				self.mimes = MimeReader(contentType)
+				mimes = MimeReader(contentType)
 			}
 		}
 		if let mimes = self.mimes {
 			return mimes.addToBuffer(bytes: b)
 		} else {
-			self.workingBuffer.append(contentsOf: b)
+			workingBuffer.append(contentsOf: b)
 		}
 	}
 	

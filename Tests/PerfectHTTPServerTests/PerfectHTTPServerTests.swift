@@ -504,6 +504,66 @@ class PerfectHTTPServerTests: XCTestCase {
 		})
 	}
 	
+	func testDiscoClient() {
+		let port = 8282 as UInt16
+		let msg = "Hello, world!"
+		var routes = Routes()
+		routes.add(method: .get, uri: "/") {
+			request, response in
+			response.addHeader(.contentType, value: "text/plain")
+			response.appendBody(string: msg)
+			response.completed()
+		}
+		
+		let serverExpectation = self.expectation(description: "server")
+		let clientExpectation = self.expectation(description: "client")
+		
+		let server = HTTPServer()
+		server.serverPort = port
+		server.addRoutes(routes)
+		
+		func endClient() {
+			server.stop()
+			clientExpectation.fulfill()
+		}
+		
+		Threading.dispatch {
+			do {
+				try server.start()
+			} catch PerfectError.networkError(let err, let msg) {
+				XCTFail("Network error thrown: \(err) \(msg)")
+			} catch {
+				XCTFail("Error thrown: \(error)")
+			}
+			serverExpectation.fulfill()
+		}
+		Threading.sleep(seconds: 1.0)
+		let clientNet = NetTCP()
+		Threading.dispatch {
+			do {
+				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
+					net in
+					guard let net = net else {
+						XCTFail("Could not connect to server")
+						return endClient()
+					}
+					let partial = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r"
+					_ = net.writeFully(bytes: Array(partial.utf8))
+					net.close()
+					endClient()
+				}
+			} catch {
+				XCTFail("Error thrown: \(error)")
+				endClient()
+			}
+		}
+		
+		self.waitForExpectations(timeout: 20000, handler: {
+			_ in
+			
+		})
+	}
+	
 	static var oneSet = false, twoSet = false, threeSet = false
 	
 	func testRequestFilters() {
@@ -1105,6 +1165,7 @@ class PerfectHTTPServerTests: XCTestCase {
 			("testSimpleHandler", testSimpleHandler),
 			("testSimpleStreamingHandler", testSimpleStreamingHandler),
 			("testSlowClient", testSlowClient),
+			("testDiscoClient", testDiscoClient),
 			("testRequestFilters", testRequestFilters),
 			("testResponseFilters", testResponseFilters),
 			("testStreamingResponseFilters", testStreamingResponseFilters),

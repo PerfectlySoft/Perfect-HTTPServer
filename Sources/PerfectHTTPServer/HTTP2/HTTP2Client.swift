@@ -469,17 +469,12 @@ open class HTTP2Client {
 		let net = self.net
 		net.readBytesFully(count: 9, timeoutSeconds: time) {
 			bytes in
-			
 			if let b = bytes {
-				
 				var header = self.bytesToHeader(b)
-				
 				if header.length > 0 {
 					net.readBytesFully(count: Int(header.length), timeoutSeconds: time) {
 						bytes in
-						
 						header.payload = bytes
-						
 						callback(header)
 					}
 				} else {
