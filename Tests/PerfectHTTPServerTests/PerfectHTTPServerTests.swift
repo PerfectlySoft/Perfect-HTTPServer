@@ -234,7 +234,7 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testSimpleHandler() {
-		let port = 8282 as UInt16
+		let port = 8282
 		let msg = "Hello, world!"
 		var routes = Routes()
 		routes.add(method: .get, uri: "/", handler: {
@@ -244,79 +244,67 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(description: "server")
-		let clientExpectation = self.expectation(description: "client")
 		
-		let server = HTTPServer()
-		server.addRoutes(routes)
-		server.serverPort = port
+		let clientExpectation = self.expectation(description: "client")
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
 		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clienttcp = NetTCP()
-		Threading.dispatch {
-			do {
-				try clienttcp.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
+		do {
+			try clienttcp.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
 					
-					guard let net = net else {
-						XCTFail("Could not connect to server")
+					guard count == reqStr.utf8.count else {
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 						return endClient()
 					}
-					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
-					net.write(string: reqStr) {
-						count in
+					
+					Threading.sleep(seconds: 2.0)
+					net.readSomeBytes(count: 1024) {
+						bytes in
 						
-						guard count == reqStr.utf8.count else {
-							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTFail("Could not read bytes from server")
 							return endClient()
 						}
 						
-						Threading.sleep(seconds: 2.0)
-						net.readSomeBytes(count: 1024) {
-							bytes in
-							
-							guard let bytes = bytes, bytes.count > 0 else {
-								XCTFail("Could not read bytes from server")
-								return endClient()
-							}
-							
-							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.split(separator: "\r\n").map(String.init)
-							
-							XCTAssertEqual(splitted.last, msg)
-							
-							endClient()
-						}
+						let str = UTF8Encoding.encode(bytes: bytes)
+						let splitted = str.split(separator: "\r\n").map(String.init)
+						
+						XCTAssertEqual(splitted.last, msg)
+						
+						endClient()
 					}
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 10000, handler: {
+		waitForExpectations(timeout: 10000) {
 			_ in
 			
-		})
+		}
 	}
 	
 	func testSimpleStreamingHandler() {
-		let port = 8282 as UInt16
+		let port = 8282
 		var routes = Routes()
 		routes.add(method: .get, uri: "/", handler: {
 				request, response in
@@ -331,93 +319,80 @@ class PerfectHTTPServerTests: XCTestCase {
 				}
 			}
 		)
-		let serverExpectation = self.expectation(description: "server")
+		
 		let clientExpectation = self.expectation(description: "client")
-		
-		let server = HTTPServer()
-		server.serverPort = port
-		server.addRoutes(routes)
-		
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
 		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
 					
-					guard let net = net else {
-						XCTFail("Could not connect to server")
+					guard count == reqStr.utf8.count else {
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 						return endClient()
 					}
-					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
-					net.write(string: reqStr) {
-						count in
+					
+					Threading.sleep(seconds: 2.0)
+					net.readSomeBytes(count: 2048) {
+						bytes in
 						
-						guard count == reqStr.utf8.count else {
-							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTFail("Could not read bytes from server")
 							return endClient()
 						}
 						
-						Threading.sleep(seconds: 2.0)
-						net.readSomeBytes(count: 2048) {
-							bytes in
-							
-							guard let bytes = bytes, bytes.count > 0 else {
-								XCTFail("Could not read bytes from server")
-								return endClient()
-							}
-							
-							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
-							let compare = ["HTTP/1.0 200 OK",
-							               "Content-Type: text/plain",
-							               "Transfer-Encoding: chunked",
-							               "",
-							               "1",
-							               "A",
-							               "2",
-							               "BC",
-							               "0",
-							               "",
-							               ""]
-							XCTAssert(splitted.count == compare.count)
-							for (a, b) in zip(splitted, compare) {
-								XCTAssert(a == b, "\(splitted) != \(compare)")
-							}
-							
-							endClient()
+						let str = UTF8Encoding.encode(bytes: bytes)
+						let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+						let compare = ["HTTP/1.0 200 OK",
+									   "Content-Type: text/plain",
+									   "Transfer-Encoding: chunked",
+									   "",
+									   "1",
+									   "A",
+									   "2",
+									   "BC",
+									   "0",
+									   "",
+									   ""]
+						XCTAssert(splitted.count == compare.count)
+						for (a, b) in zip(splitted, compare) {
+							XCTAssert(a == b, "\(splitted) != \(compare)")
 						}
+						
+						endClient()
 					}
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 10000, handler: {
+		waitForExpectations(timeout: 10000) {
 			_ in
 			
-		})
+		}
 	}
 	
 	func testSlowClient() {
-		let port = 8282 as UInt16
+		let port = 8282
 		let msg = "Hello, world!"
 		var routes = Routes()
 		routes.add(method: .get, uri: "/", handler: {
@@ -427,85 +402,70 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(description: "server")
 		let clientExpectation = self.expectation(description: "client")
-		
-		let server = HTTPServer()
-		server.serverPort = port
-		server.addRoutes(routes)
-		
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
-		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
-					
-					guard let net = net else {
-						XCTFail("Could not connect to server")
-						return endClient()
-					}
-					var reqIt = Array("GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n".utf8).makeIterator()
-					func pushChar() {
-						if let b = reqIt.next() {
-							let a = [b]
-							net.write(bytes: a) {
-								wrote in
-								guard 1 == wrote else {
-									XCTFail("Could not write request \(wrote) != \(1)")
-									return endClient()
-								}
-								Threading.sleep(seconds: 0.5)
-								Threading.dispatch {
-									pushChar()
-								}
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				var reqIt = Array("GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n".utf8).makeIterator()
+				func pushChar() {
+					if let b = reqIt.next() {
+						let a = [b]
+						net.write(bytes: a) {
+							wrote in
+							guard 1 == wrote else {
+								XCTFail("Could not write request \(wrote) != \(1)")
+								return endClient()
 							}
-						} else {
-							Threading.sleep(seconds: 2.0)
-							net.readSomeBytes(count: 1024) {
-								bytes in
-								guard let bytes = bytes, bytes.count > 0 else {
-									XCTFail("Could not read bytes from server")
-									return endClient()
-								}
-								let str = UTF8Encoding.encode(bytes: bytes)
-								let splitted = str.split(separator: "\r\n").map(String.init)
-								XCTAssert(splitted.last == msg)
-								endClient()
+							Threading.sleep(seconds: 0.5)
+							Threading.dispatch {
+								pushChar()
 							}
 						}
+					} else {
+						Threading.sleep(seconds: 2.0)
+						net.readSomeBytes(count: 1024) {
+							bytes in
+							guard let bytes = bytes, bytes.count > 0 else {
+								XCTFail("Could not read bytes from server")
+								return endClient()
+							}
+							let str = UTF8Encoding.encode(bytes: bytes)
+							let splitted = str.split(separator: "\r\n").map(String.init)
+							XCTAssert(splitted.last == msg)
+							endClient()
+						}
 					}
-					pushChar()
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
+				pushChar()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 20000, handler: {
+		waitForExpectations(timeout: 20000) {
 			_ in
 			
-		})
+		}
 	}
 	
 	func testDiscoClient() {
-		let port = 8282 as UInt16
+		let port = 8282
 		let msg = "Hello, world!"
 		var routes = Routes()
 		routes.add(method: .get, uri: "/") {
@@ -514,60 +474,44 @@ class PerfectHTTPServerTests: XCTestCase {
 			response.appendBody(string: msg)
 			response.completed()
 		}
-		
-		let serverExpectation = self.expectation(description: "server")
 		let clientExpectation = self.expectation(description: "client")
-		
-		let server = HTTPServer()
-		server.serverPort = port
-		server.addRoutes(routes)
-		
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
-		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
-					guard let net = net else {
-						XCTFail("Could not connect to server")
-						return endClient()
-					}
-					let partial = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r"
-					_ = net.writeFully(bytes: Array(partial.utf8))
-					net.close()
-					endClient()
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
+				let partial = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r"
+				_ = net.writeFully(bytes: Array(partial.utf8))
+				net.close()
 				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 20000, handler: {
+		waitForExpectations(timeout: 20000) {
 			_ in
 			
-		})
+		}
 	}
 	
 	static var oneSet = false, twoSet = false, threeSet = false
 	
 	func testRequestFilters() {
-		let port = 8282 as UInt16
+		let port = 8282
 		let msg = "Hello, world!"
 		
 		PerfectHTTPServerTests.oneSet = false
@@ -613,75 +557,61 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(description: "server")
 		let clientExpectation = self.expectation(description: "client")
-		
-		let server = HTTPServer()
-		server.setRequestFilters(requestFilters)
-		server.serverPort = port
-		server.addRoutes(routes)
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes, requestFilters: requestFilters)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
 		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
 					
-					guard let net = net else {
-						XCTFail("Could not connect to server")
+					guard count == reqStr.utf8.count else {
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 						return endClient()
 					}
-					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
-					net.write(string: reqStr) {
-						count in
+					
+					Threading.sleep(seconds: 3.0)
+					net.readSomeBytes(count: 1024) {
+						bytes in
 						
-						guard count == reqStr.utf8.count else {
-							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTFail("Could not read bytes from server")
 							return endClient()
 						}
 						
-						Threading.sleep(seconds: 3.0)
-						net.readSomeBytes(count: 1024) {
-							bytes in
-							
-							guard let bytes = bytes, bytes.count > 0 else {
-								XCTFail("Could not read bytes from server")
-								return endClient()
-							}
-							
-							endClient()
-						}
+						endClient()
 					}
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 10000, handler: {
+		waitForExpectations(timeout: 10000) {
 			_ in
 			XCTAssert(PerfectHTTPServerTests.oneSet && PerfectHTTPServerTests.twoSet && PerfectHTTPServerTests.threeSet)
-		})
+		}
 	}
 	
 	func testResponseFilters() {
-		let port = 8282 as UInt16
+		let port = 8282
 		
 		struct Filter1: HTTPResponseFilter {
 			func filterHeaders(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
@@ -742,88 +672,73 @@ class PerfectHTTPServerTests: XCTestCase {
 				response.completed()
 			}
 		)
-		let serverExpectation = self.expectation(description: "server")
 		let clientExpectation = self.expectation(description: "client")
-		
-		let server = HTTPServer()
-		server.setResponseFilters(responseFilters)
-		server.serverPort = port
-		server.addRoutes(routes)
-		
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes, responseFilters: responseFilters)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
 		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
 					
-					guard let net = net else {
-						XCTFail("Could not connect to server")
+					guard count == reqStr.utf8.count else {
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 						return endClient()
 					}
-					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
-					net.write(string: reqStr) {
-						count in
+					
+					Threading.sleep(seconds: 3.0)
+					net.readSomeBytes(count: 2048) {
+						bytes in
 						
-						guard count == reqStr.utf8.count else {
-							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTFail("Could not read bytes from server")
 							return endClient()
 						}
 						
-						Threading.sleep(seconds: 3.0)
-						net.readSomeBytes(count: 2048) {
-							bytes in
-							
-							guard let bytes = bytes, bytes.count > 0 else {
-								XCTFail("Could not read bytes from server")
-								return endClient()
-							}
-							
-							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
-							let compare = ["HTTP/1.0 200 OK",
-							               "Content-Type: text/plain",
-							               "Content-Length: 6",
-							               "X-Custom: Value",
-							               "",
-							               "abZabZ"]
-							XCTAssert(splitted.count == compare.count)
-							for (a, b) in zip(splitted, compare) {
-								XCTAssert(a == b, "\(splitted) != \(compare)")
-							}
-							
-							endClient()
+						let str = UTF8Encoding.encode(bytes: bytes)
+						let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+						let compare = ["HTTP/1.0 200 OK",
+									   "Content-Type: text/plain",
+									   "Content-Length: 6",
+									   "X-Custom: Value",
+									   "",
+									   "abZabZ"]
+						XCTAssert(splitted.count == compare.count)
+						for (a, b) in zip(splitted, compare) {
+							XCTAssert(a == b, "\(splitted) != \(compare)")
 						}
+						
+						endClient()
 					}
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 10000, handler: {
+		waitForExpectations(timeout: 10000) {
 			_ in
-		})
+		}
 	}
 	
 	func testStreamingResponseFilters() {
-		let port = 8282 as UInt16
+		let port = 8282
 		
 		struct Filter1: HTTPResponseFilter {
 			func filterHeaders(response: HTTPResponse, callback: (HTTPResponseFilterResult) -> ()) {
@@ -889,85 +804,73 @@ class PerfectHTTPServerTests: XCTestCase {
 				}
 			}
 		)
-		let serverExpectation = self.expectation(description: "server")
 		let clientExpectation = self.expectation(description: "client")
 		
-		let server = HTTPServer()
-		server.setResponseFilters(responseFilters)
-		server.serverPort = port
-		server.addRoutes(routes)
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes, responseFilters: responseFilters)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
 		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
 					
-					guard let net = net else {
-						XCTFail("Could not connect to server")
+					guard count == reqStr.utf8.count else {
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 						return endClient()
 					}
-					let reqStr = "GET / HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
-					net.write(string: reqStr) {
-						count in
+					
+					Threading.sleep(seconds: 3.0)
+					net.readSomeBytes(count: 2048) {
+						bytes in
 						
-						guard count == reqStr.utf8.count else {
-							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTFail("Could not read bytes from server")
 							return endClient()
 						}
 						
-						Threading.sleep(seconds: 3.0)
-						net.readSomeBytes(count: 2048) {
-							bytes in
-							
-							guard let bytes = bytes, bytes.count > 0 else {
-								XCTFail("Could not read bytes from server")
-								return endClient()
-							}
-							
-							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
-							let compare = ["HTTP/1.0 200 OK",
-							               "Content-Type: text/plain",
-							               "Transfer-Encoding: chunked",
-							               "X-Custom: Value",
-							               "",
-							               "3",
-							               "abZ",
-							               "3",
-							               "abZ",
-							               "0",
-							               "",
-							               ""]
-							XCTAssert(splitted.count == compare.count)
-							for (a, b) in zip(splitted, compare) {
-								XCTAssert(a == b, "\(splitted) != \(compare)")
-							}
-							
-							endClient()
+						let str = UTF8Encoding.encode(bytes: bytes)
+						let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+						let compare = ["HTTP/1.0 200 OK",
+									   "Content-Type: text/plain",
+									   "Transfer-Encoding: chunked",
+									   "X-Custom: Value",
+									   "",
+									   "3",
+									   "abZ",
+									   "3",
+									   "abZ",
+									   "0",
+									   "",
+									   ""]
+						XCTAssert(splitted.count == compare.count)
+						for (a, b) in zip(splitted, compare) {
+							XCTAssert(a == b, "\(splitted) != \(compare)")
 						}
+						
+						endClient()
 					}
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
 		
 		self.waitForExpectations(timeout: 10000, handler: {
@@ -1019,7 +922,6 @@ class PerfectHTTPServerTests: XCTestCase {
 		}
 		
 		let clientExpectation = self.expectation(description: "client")
-		Threading.sleep(seconds: 1.0)
 		do {
 			let client = NetTCP()
 			try client.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
@@ -1041,17 +943,10 @@ class PerfectHTTPServerTests: XCTestCase {
 					Threading.sleep(seconds: 2.0)
 					net.readSomeBytes(count: 1024) {
 						bytes in
-						
 						guard let bytes = bytes, bytes.count > 0 else {
 							XCTFail("Could not read bytes from server")
 							return clientExpectation.fulfill()
 						}
-						
-//						let str = UTF8Encoding.encode(bytes: bytes)
-//						let splitted = str.characters.split(separator: "\r\n").map(String.init)
-						
-//						XCTAssert(splitted.last == msg)
-						
 						clientExpectation.fulfill()
 					}
 				}
@@ -1068,7 +963,7 @@ class PerfectHTTPServerTests: XCTestCase {
 	}
 	
 	func testRoutingTrailingSlash() {
-		let port = 8282 as UInt16
+		let port = 8282
 		var routes = Routes()
 		let badHandler = {
 			(_:HTTPRequest, resp:HTTPResponse) in
@@ -1081,70 +976,58 @@ class PerfectHTTPServerTests: XCTestCase {
 		routes.add(method: .get, uri: "/", handler: { _, _ in })
 		routes.add(method: .get, uri: "/test/", handler: goodHandler)
 		routes.add(method: .get, uri: "/**", handler: badHandler)
-		let serverExpectation = self.expectation(description: "server")
-		let clientExpectation = self.expectation(description: "client")
 		
-		let server = HTTPServer()
-		server.serverPort = port
-		server.addRoutes(routes)
+		let clientExpectation = self.expectation(description: "client")
+		let config: HTTPServer.LaunchContext
+		do {
+			config = try HTTPServer.launch(wait: false, name: "localhost", port: port, routes: routes)
+		} catch {
+			return XCTFail("Error: \(error)")
+		}
 		
 		func endClient() {
-			server.stop()
+			config.terminate()
 			clientExpectation.fulfill()
 		}
 		
-		Threading.dispatch {
-			do {
-				try server.start()
-			} catch PerfectError.networkError(let err, let msg) {
-				XCTFail("Network error thrown: \(err) \(msg)")
-			} catch {
-				XCTFail("Error thrown: \(error)")
-			}
-			serverExpectation.fulfill()
-		}
-		Threading.sleep(seconds: 1.0)
 		let clientNet = NetTCP()
-		Threading.dispatch {
-			do {
-				try clientNet.connect(address: "127.0.0.1", port: port, timeoutSeconds: 5.0) {
-					net in
-					guard let net = net else {
-						XCTFail("Could not connect to server")
+		do {
+			try clientNet.connect(address: "127.0.0.1", port: UInt16(port), timeoutSeconds: 5.0) {
+				net in
+				guard let net = net else {
+					XCTFail("Could not connect to server")
+					return endClient()
+				}
+				let reqStr = "GET /test/ HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
+				net.write(string: reqStr) {
+					count in
+					guard count == reqStr.utf8.count else {
+						XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
 						return endClient()
 					}
-					let reqStr = "GET /test/ HTTP/1.0\r\nHost: localhost:\(port)\r\nFrom: me@host.com\r\n\r\n"
-					net.write(string: reqStr) {
-						count in
-						guard count == reqStr.utf8.count else {
-							XCTFail("Could not write request \(count) != \(reqStr.utf8.count)")
+					Threading.sleep(seconds: 2.0)
+					net.readSomeBytes(count: 1024) {
+						bytes in
+						
+						guard let bytes = bytes, bytes.count > 0 else {
+							XCTFail("Could not read bytes from server")
 							return endClient()
 						}
-						Threading.sleep(seconds: 2.0)
-						net.readSomeBytes(count: 1024) {
-							bytes in
-							
-							guard let bytes = bytes, bytes.count > 0 else {
-								XCTFail("Could not read bytes from server")
-								return endClient()
-							}
-							let str = UTF8Encoding.encode(bytes: bytes)
-							let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
-							let compare = "HTTP/1.0 404 Not Found"
-							XCTAssertEqual(splitted.first, compare)
-							endClient()
-						}
+						let str = UTF8Encoding.encode(bytes: bytes)
+						let splitted = str.split(separator: "\r\n", omittingEmptySubsequences: false).map(String.init)
+						let compare = "HTTP/1.0 404 Not Found"
+						XCTAssertEqual(splitted.first, compare)
+						endClient()
 					}
 				}
-			} catch {
-				XCTFail("Error thrown: \(error)")
-				endClient()
 			}
+		} catch {
+			XCTFail("Error thrown: \(error)")
+			endClient()
 		}
-		
-		self.waitForExpectations(timeout: 10000, handler: {
+		waitForExpectations(timeout: 10000) {
 			_ in
-		})
+		}
 	}
 	
     static var allTests : [(String, (PerfectHTTPServerTests) -> () throws -> Void)] {
