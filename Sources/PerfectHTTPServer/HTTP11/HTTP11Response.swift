@@ -190,9 +190,14 @@ class HTTP11Response: HTTPResponse {
 	}
 
 	func finishPushHeaders(callback: @escaping (Bool) -> ()) {
-		var responseString = "HTTP/\(request.protocolVersion.0).\(request.protocolVersion.1) \(status)\r\n"
+		var responseString: String
+		if case .ok = status, request.protocolVersion.1 == 1 {
+			responseString = "HTTP/1.1 200 OK\r\n"
+		} else {
+			responseString = "HTTP/\(request.protocolVersion.0).\(request.protocolVersion.1) \(status)\r\n"
+		}
 		for (n, v) in headers {
-			responseString.append("\(n.standardName): \(v)\r\n")
+			responseString.append(n.standardName + ": " + v + "\r\n")
 		}
 		responseString.append("\r\n")
 		bodyPrefix = Array(responseString.utf8)
