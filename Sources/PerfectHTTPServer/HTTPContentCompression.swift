@@ -46,7 +46,7 @@ class ZlibStream {
 		let needed = Int(compressBound(UInt(bytes.count)))
 		let dest = UnsafeMutablePointer<UInt8>.allocate(capacity: needed)
 		defer {
-			dest.deallocate(capacity: needed)
+			dest.deallocate()
 		}
 		if !bytes.isEmpty {
 			stream.next_in = UnsafeMutablePointer(mutating: bytes)
