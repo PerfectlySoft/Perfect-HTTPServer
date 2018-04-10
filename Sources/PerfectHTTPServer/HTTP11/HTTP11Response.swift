@@ -260,19 +260,7 @@ class HTTP11Response: HTTPResponse {
 		}
 		let hexString = "\(String(bodyCount, radix: 16, uppercase: true))\r\n"
 		let sendA = Array(hexString.utf8)
-		pushNonStreamed(bytes: sendA) {
-			ok in
-			guard ok else {
-				return self.abort()
-			}
-			self.pushNonStreamed(bytes: bytes) {
-				ok in
-				guard ok else {
-					return self.abort()
-				}
-				self.pushNonStreamed(bytes: Array("\r\n".utf8), callback: callback)
-			}
-		}
+		pushNonStreamed(bytes: sendA + bytes + Array("\r\n".utf8), callback: callback)
     }
     
     func pushNonStreamed(bytes: [UInt8], callback: @escaping (Bool) -> ()) {
