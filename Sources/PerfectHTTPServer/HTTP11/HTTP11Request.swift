@@ -439,7 +439,7 @@ class HTTP11Request: HTTPRequest {
 			if !b.isEmpty {
 				if self.didReadSomeBytes(b, callback: callback) {
 					if b.count == httpReadSize {
-						Threading.dispatch {
+						netHandleQueue.async {
 							self.readRequest(callback: callback)
 						}
 					} else {
