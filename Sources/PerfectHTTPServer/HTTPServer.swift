@@ -226,7 +226,7 @@ public class HTTPServer: ServerInstance {
 	}
 	
 	func accepted(net: NetTCP) {
-		Threading.dispatch {
+		netHandleQueue.async {
 			self.handleConnection(net)
 		}
 	}
@@ -301,7 +301,7 @@ public class HTTPServer: ServerInstance {
 		if response.isKeepAlive {
 			response.completedCallback = { [weak self] in
 				if let `self` = self {
-					Threading.dispatch {
+					netHandleQueue.async {
 						self.handleConnection(net)
 					}
 				}

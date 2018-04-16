@@ -45,6 +45,7 @@ class HTTP11Response: HTTPResponse {
     
     var isStreaming = false
     var wroteHeaders = false
+	var contentLengthSet = false
     var completedCallback: (() -> ())?
     let request: HTTPRequest
 	var handlers: IndexingIterator<[RequestHandler]>?
@@ -107,6 +108,9 @@ class HTTP11Response: HTTPResponse {
 	@discardableResult
     func addHeader(_ name: HTTPResponseHeader.Name, value: String) -> Self {
         headerStore.append((name, value))
+		if case .contentLength = name {
+			contentLengthSet = true
+		}
 		return self
     }
 	
@@ -152,8 +156,8 @@ class HTTP11Response: HTTPResponse {
 		}
         if isStreaming {
             addHeader(.transferEncoding, value: "chunked")
-        } else if nil == header(.contentLength) {
-            setHeader(.contentLength, value: "\(bodyBytes.count)")
+        } else if !contentLengthSet {
+            addHeader(.contentLength, value: "\(bodyBytes.count)")
         }
 		if let filters = self.filters {
 			return filterHeaders(allFilters: filters, callback: callback)
@@ -190,17 +194,17 @@ class HTTP11Response: HTTPResponse {
 	}
 
 	func finishPushHeaders(callback: @escaping (Bool) -> ()) {
-		var responseString: String
+		let eol = [13, 10] as [UInt8]
 		if case .ok = status, request.protocolVersion.1 == 1 {
-			responseString = "HTTP/1.1 200 OK\r\n"
+			bodyPrefix = [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10]
 		} else {
-			responseString = "HTTP/\(request.protocolVersion.0).\(request.protocolVersion.1) \(status)\r\n"
+			bodyPrefix = Array("HTTP/\(request.protocolVersion.0).\(request.protocolVersion.1) \(status)\r\n".utf8)
 		}
 		for (n, v) in headers {
-			responseString.append(n.standardName + ": " + v + "\r\n")
+			bodyPrefix.append(contentsOf: Array((n.standardName + ": " + v).utf8))
+			bodyPrefix.append(contentsOf: eol)
 		}
-		responseString.append("\r\n")
-		bodyPrefix = Array(responseString.utf8)
+		bodyPrefix.append(contentsOf: eol)
 		push(callback: callback)
 	}
 	
@@ -281,12 +285,11 @@ class HTTP11Response: HTTPResponse {
     }
     
     func pushNonStreamed(bytes: [UInt8], callback: @escaping (Bool) -> ()) {
-		if bodyPrefix.count > 0 {
+		if !bodyPrefix.isEmpty {
 			let newBytes = bodyPrefix + bytes
 			bodyPrefix = []
 			return pushNonStreamed(bytes: newBytes, callback: callback)
 		}
-		
         let bodyCount = bytes.count
         guard bodyCount > 0 else {
             return callback(true)
@@ -296,7 +299,7 @@ class HTTP11Response: HTTPResponse {
             guard bodyCount == sent else {
                 return self.abort()
             }
-            Threading.dispatch {
+            netHandleQueue.async {
                 callback(true)
             }
         }

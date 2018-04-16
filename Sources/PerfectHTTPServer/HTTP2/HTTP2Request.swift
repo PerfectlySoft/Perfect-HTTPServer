@@ -276,7 +276,7 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	
 	func processRequest() {
 		let response = HTTP2Response(self)
-		Threading.dispatch { // get off the frame read thread
+		netHandleQueue.async { // get off the frame read thread
 			self.routeRequest(response: response)
 		}
 	}
