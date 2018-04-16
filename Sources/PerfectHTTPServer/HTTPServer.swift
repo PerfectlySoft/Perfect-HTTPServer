@@ -244,10 +244,6 @@ public class HTTPServer: ServerInstance {
 			try PerfectServer.switchTo(userName: runAs)
 		}
 		sock.listen()
-		
-		var flag = 1
-		_ = setsockopt(sock.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
-		
 		defer { sock.close() }
 		self.serverAddress = sock.localAddress?.host ?? ""
 		self.routeNavigator = self.routes.navigator
@@ -269,19 +265,14 @@ public class HTTPServer: ServerInstance {
 	}
 	
 	func handleConnection(_ net: NetTCP) {
-		
-	#if os(Linux)
 		var flag = 1
 		_ = setsockopt(net.fd.fd, Int32(IPPROTO_TCP), TCP_NODELAY, &flag, UInt32(MemoryLayout<Int32>.size))
-	#endif
-		
 		if let netSSL = net as? NetTCPSSL, let neg = netSSL.alpnNegotiated, neg == ALPNSupport.http2.rawValue {
 			_ = HTTP2PrefaceValidator(net, timeoutSeconds: 5.0) {
 				_ = HTTP2Session(net, server: self)
 			}
 			return
 		}
-		
 		let req = HTTP11Request(connection: net)
 		req.serverName = self.serverName
 		req.readRequest { [weak self]
