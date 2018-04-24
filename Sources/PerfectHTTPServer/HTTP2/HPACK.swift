@@ -1174,9 +1174,9 @@ final class HPACKDecoder {
 	}
 	
 	func addHeader(headerListener listener: HeaderListener, name: [UInt8], value: [UInt8], sensitive: Bool) {
+		listener.addHeader(name: name, value: value, sensitive: sensitive)
 		let newSize = headerSize + name.count + value.count
 		if newSize <= maxHeaderSize {
-			listener.addHeader(name: name, value: value, sensitive: sensitive)
 			headerSize = newSize
 		} else {
 			headerSize = maxHeaderSize + 1

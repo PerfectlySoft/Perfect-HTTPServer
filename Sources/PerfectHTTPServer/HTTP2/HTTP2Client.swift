@@ -483,7 +483,6 @@ open class HTTP2Client {
 		} else if !net.writeFully(bytes: frame.headerBytes()) {
 			callback(false)
 		} else {
-			//			print("Wrote frame \(frame.typeStr) \(frame.flagsStr) \(frame.streamId)")
 			if let p = frame.payload {
 				callback(net.writeFully(bytes: p))
 			} else {
