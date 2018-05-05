@@ -1,23 +1,6 @@
 // swift-tools-version:4.0
-//
-//  Package.swift
-//  PerfectHTTPServer
-//
-//  Created by Kyle Jessup on 2016-05-02.
-//	Copyright (C) 2016 PerfectlySoft, Inc.
-//
-//===----------------------------------------------------------------------===//
-//
-// This source file is part of the Perfect.org open source project
-//
-// Copyright (c) 2015 - 2016 PerfectlySoft Inc. and the Perfect project authors
-// Licensed under Apache License v2.0
-//
-// See http://perfect.org/licensing.html for license information
-//
-//===----------------------------------------------------------------------===//
-//
-
+// Generated automatically by Perfect Assistant 2
+// Date: 2018-03-28 18:54:02 +0000
 import PackageDescription
 
 let package = Package(
@@ -26,8 +9,8 @@ let package = Package(
 		.library(name: "PerfectHTTPServer", targets: ["PerfectHTTPServer"])
 	],
 	dependencies: [
-		.package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", from: "3.0.0"),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", from: "3.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", from: "3.1.2"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", from: "3.0.12"),
 		.package(url: "https://github.com/PerfectlySoft/Perfect-CZlib-src.git", from: "0.0.0")
 	],
 	targets: [

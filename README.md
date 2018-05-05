@@ -46,7 +46,7 @@ This repository contains the main HTTP 1.1 &amp; HTTP/2 server.
 If you are using this server for your Perfect Server-Side Swift project then this will be the main dependency for your project.
 
 ```swift
-.Package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", majorVersion: 3)
+.package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", from: "3.0.0")
 ```
 
 If you are starting out with Perfect look at the main [Perfect](https://github.com/PerfectlySoft/Perfect) repository for details.
@@ -79,7 +79,7 @@ Please contact us if you experience any problems or incompatibilities while expe
 
 Add the dependency to your Package.swift
 
-`.Package(url:"https://github.com/PerfectlySoft/Perfect-HTTPServer.git", majorVersion: 3)`
+`.package(url: "https://github.com/PerfectlySoft/Perfect-HTTPServer.git", from: "3.0.0")`
 
 In your app, launch one or more servers.
 ```

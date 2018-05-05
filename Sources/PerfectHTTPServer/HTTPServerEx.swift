@@ -103,13 +103,13 @@ public extension HTTPServer {
 		}
 		
 		init() {
-			self.name = ""
-			self.address = ""
-			self.port = 0
-			self.routes = .init()
-			self.requestFilters = []
-			self.responseFilters = []
-			self.tlsConfig = nil
+			name = ""
+			address = ""
+			port = 0
+			routes = .init()
+			requestFilters = []
+			responseFilters = []
+			tlsConfig = nil
 		}
 		
 		public init(name: String, address: String, port: Int, routes: Routes,
@@ -241,20 +241,20 @@ public extension HTTPServer {
 					case 53:
 						() // socket was closed. not an error
 					case 48:
-						throw LaunchFailure(message: "Server \(id) - Another server was already listening on the requested port \(self.server.port)", configuration: self.server)
+						throw LaunchFailure(message: "Server \(id) - Another server was already listening on the requested port \(server.port)", configuration: server)
 					default:
-						throw LaunchFailure(message: "Server \(id) - \(code):\(msg)", configuration: self.server)
+						throw LaunchFailure(message: "Server \(id) - \(code):\(msg)", configuration: server)
 					}
 				default:
-					throw LaunchFailure(message: "Server \(id) - \(error)", configuration: self.server)
+					throw LaunchFailure(message: "Server \(id) - \(error)", configuration: server)
 				}
 			}
 			return terminated
 		}
 		
 		func bindServer() throws {
-			if nil == self.httpServer {
-				self.httpServer = server.server
+			if nil == httpServer {
+				httpServer = server.server
 			}
 			guard let httpServer = self.httpServer else {
 				throw LaunchFailure(message: "Could not get HTTPServer", configuration: server)
@@ -264,12 +264,12 @@ public extension HTTPServer {
 			} catch PerfectNetError.networkError(let code, let msg) {
 				switch code {
 				case 48:
-					throw LaunchFailure(message: "Server \(id) - Another server was already listening on the requested port \(self.server.port)", configuration: self.server)
+					throw LaunchFailure(message: "Server \(id) - Another server was already listening on the requested port \(server.port)", configuration: server)
 				default:
-					throw LaunchFailure(message: "Server \(id) - \(code):\(msg)", configuration: self.server)
+					throw LaunchFailure(message: "Server \(id) - \(code):\(msg)", configuration: server)
 				}
 			} catch {
-				throw LaunchFailure(message: "Server \(id) - \(error)", configuration: self.server)
+				throw LaunchFailure(message: "Server \(id) - \(error)", configuration: server)
 			}
 		}
 		
@@ -333,7 +333,6 @@ public extension HTTPServer {
 				notSSL.append(server)
 			}
 		}
-		
 		return (notSSL + singleServers.values).map { LaunchContext($0) } + multiplexers.values.map { LaunchContext($0) }
 	}
 	
@@ -344,8 +343,8 @@ public extension HTTPServer {
 		try ctx.forEach { try $0.bindServer() }
 		try switchUser()
 		try ctx.forEach { try $0.launchServer() }
+		try ctx.forEach { try $0.wait(seconds: 1.0) }
 		if wait {
-			try ctx.forEach { try $0.wait(seconds: 1.0) }
 			try ctx.forEach { try $0.wait() }
 		}
 		return ctx
@@ -356,15 +355,7 @@ public extension HTTPServer {
 	public static func launch(wait: Bool = true, name: String, port: Int, routes: Routes,
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
-		let lc = LaunchContext(.server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters))
-		try lc.bindServer()
-		try switchUser()
-		try lc.launchServer()
-		if wait {
-			try lc.wait(seconds: 1.0)
-			try lc.wait()
-		}
-		return lc
+		return try launch(wait: wait, [.server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)])[0]
 	}
 	
 	// launch one with document root
@@ -372,15 +363,7 @@ public extension HTTPServer {
 	public static func launch(wait: Bool = true, name: String, port: Int, documentRoot root: String,
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
-		let lc = LaunchContext(.server(name: name, port: port, documentRoot: root, requestFilters: requestFilters, responseFilters: responseFilters))
-		try lc.bindServer()
-		try switchUser()
-		try lc.launchServer()
-		if wait {
-			try lc.wait(seconds: 1.0)
-			try lc.wait()
-		}
-		return lc
+		return try launch(wait: wait, [.server(name: name, port: port, documentRoot: root, requestFilters: requestFilters, responseFilters: responseFilters)])[0]
 	}
 	
 	private static func switchUser() throws {

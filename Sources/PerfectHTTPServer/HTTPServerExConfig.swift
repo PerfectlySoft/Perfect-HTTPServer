@@ -109,7 +109,7 @@ private extension Route {
 		let fn = UnsafeMutablePointer<ReturnsRequestHandlerGivenData>.allocate(capacity: 1)
 		defer {
 			fn.deinitialize(count: 1)
-			fn.deallocate(capacity: 1)
+			fn.deallocate()
 		}
 		fn.initialize(to: templateWithData)
 		let p = UnsafeMutableRawPointer(fn).assumingMemoryBound(to: swift_func_wrapper.self)
@@ -151,7 +151,7 @@ extension TLSConfiguration {
 		          caCertPath: data["caCertPath"] as? String,
 		          certVerifyMode: OpenSSLVerifyMode(string: data["verifyMode"] as? String ?? ""),
 		          cipherList: data["cipherList"] as? [String] ?? TLSConfiguration.defaultCipherList,
-		          alpnSupport: (data["alpnSupport"] as? [String] ?? []).flatMap { HTTPServer.ALPNSupport(rawValue: $0) })
+				  alpnSupport: (data["alpnSupport"] as? [String] ?? []).compactMap { HTTPServer.ALPNSupport(rawValue: $0) })
 	}
 }
 
@@ -160,7 +160,7 @@ private func findRequestFilter(_ named: String, data: [String:Any]) throws -> HT
 		let fn = UnsafeMutablePointer<ReturnsRequestFilterGivenData>.allocate(capacity: 1)
 		defer {
 			fn.deinitialize(count: 1)
-			fn.deallocate(capacity: 1)
+			fn.deallocate()
 		}
 		fn.initialize(to: templateWithData)
 		let p = UnsafeMutableRawPointer(fn).assumingMemoryBound(to: swift_func_wrapper.self)
@@ -176,7 +176,7 @@ private func findResponseFilter(_ named: String, data: [String:Any]) throws -> H
 		let fn = UnsafeMutablePointer<ReturnsResponseFilterGivenData>.allocate(capacity: 1)
 		defer {
 			fn.deinitialize(count: 1)
-			fn.deallocate(capacity: 1)
+			fn.deallocate()
 		}
 		fn.initialize(to: templateWithData)
 		let p = UnsafeMutableRawPointer(fn).assumingMemoryBound(to: swift_func_wrapper.self)
