@@ -150,27 +150,27 @@ class HTTP11Response: HTTPResponse {
         }
     }
     
-    func pushHeaders(callback: @escaping (Bool) -> ()) {
-        wroteHeaders = true
-        if isKeepAlive {
-            addHeader(.connection, value: "keep-alive")
+	func pushHeaders(callback: @escaping (Bool) -> ()) {
+		wroteHeaders = true
+		if isKeepAlive {
+			addHeader(.connection, value: "keep-alive")
 		}
-        if isStreaming {
-            addHeader(.transferEncoding, value: "chunked")
-        } else if !contentLengthSet {
-            addHeader(.contentLength, value: "\(bodyBytes.count)")
-        }
-        var posixTime = timeval()
-        gettimeofday(&posixTime, nil)
-        let timeOfDay = Double((posixTime.tv_sec * 1000) + (Int(posixTime.tv_usec)/1000))
-        if let formattedDate = try? formatDate(timeOfDay, format: "%a, %d-%b-%Y %T GMT") {
-            setHeader(.date, value: formattedDate)
-        }
+		if isStreaming {
+			addHeader(.transferEncoding, value: "chunked")
+		} else if !contentLengthSet {
+			addHeader(.contentLength, value: "\(bodyBytes.count)")
+		}
+		var posixTime = timeval()
+		gettimeofday(&posixTime, nil)
+		let timeOfDay = Double((posixTime.tv_sec * 1000) + (Int(posixTime.tv_usec)/1000))
+		if let formattedDate = try? formatDate(timeOfDay, format: "%a, %d-%b-%Y %T GMT") {
+			setHeader(.date, value: formattedDate)
+		}
 		if let filters = self.filters {
 			return filterHeaders(allFilters: filters, callback: callback)
 		}
 		finishPushHeaders(callback: callback)
-    }
+	}
 	
 	func filterHeaders(allFilters: IndexingIterator<[[HTTPResponseFilter]]>, callback: @escaping (Bool) -> ()) {
 		var allFilters = allFilters

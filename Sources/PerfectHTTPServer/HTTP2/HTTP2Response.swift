@@ -18,9 +18,9 @@
 //
 
 #if os(Linux)
-    import SwiftGlibc
+	import SwiftGlibc
 #else
-    import Darwin
+	import Darwin
 #endif
 
 import PerfectLib
@@ -103,12 +103,12 @@ final class HTTP2Response: HTTPResponse {
 		guard h2Request.streamState != .closed else {
 			return callback(false)
 		}
-        var posixTime = timeval()
-        gettimeofday(&posixTime, nil)
-        let timeOfDay = Double((posixTime.tv_sec * 1000) + (Int(posixTime.tv_usec)/1000))
-        if let formattedDate = try? formatDate(timeOfDay, format: "%a, %d-%b-%Y %T GMT") {
-            setHeader(.date, value: formattedDate)
-        }
+		var posixTime = timeval()
+		gettimeofday(&posixTime, nil)
+		let timeOfDay = Double((posixTime.tv_sec * 1000) + (Int(posixTime.tv_usec)/1000))
+		if let formattedDate = try? formatDate(timeOfDay, format: "%a, %d-%b-%Y %T GMT") {
+			setHeader(.date, value: formattedDate)
+		}
 		if let filters = self.filters {
 			filterHeaders(allFilters: filters, callback: callback)
 		} else {
