@@ -278,7 +278,7 @@ public extension HTTPServer {
 			guard let httpServer = self.httpServer else {
 				throw LaunchFailure(message: "Could not get HTTPServer", configuration: server)
 			}
-			let q = Threading.getQueue(name: "Server \(id) \(UUID().string)", type: .serial)
+			let q = Threading.getQueue(name: "Server \(id) \(Foundation.UUID().uuidString)", type: .serial)
 			q.dispatch {
 				do {
 					try httpServer.start()
