@@ -345,7 +345,11 @@ public extension HTTPServer {
 		try ctx.forEach { try $0.launchServer() }
 		try ctx.forEach { try $0.wait(seconds: 1.0) }
 		if wait {
-			try ctx.forEach { try $0.wait() }
+			try ctx.forEach {
+				repeat {
+					()
+				} while try $0.wait() == false
+			}
 		}
 		return ctx
 	}
