@@ -52,7 +52,9 @@ final class HTTP2Request: HTTPRequest, HeaderListener {
 	var queryString = ""
 	var scheme = ""
 	var authority = ""
-	var queryParams: [(String, String)] = []
+	lazy var queryParams: [(String, String)] = {
+		return deFormURLEncoded(string: queryString)
+	}()
 	var protocolVersion = (2, 0)
 	var remoteAddress: (host: String, port: UInt16) {
 		guard let remote = connection.remoteAddress else {
