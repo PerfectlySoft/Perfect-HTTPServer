@@ -78,7 +78,7 @@ class ZlibStream {
 	}
 }
 
-private let responseMinSizeNoCompression = 50
+private let responseMinSizeNoCompression = 24
 
 public extension HTTPFilter {
 	/// Response filter which provides content compression.
