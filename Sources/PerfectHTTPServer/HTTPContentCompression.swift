@@ -78,6 +78,8 @@ class ZlibStream {
 	}
 }
 
+private let responseMinSizeNoCompression = 24
+
 public extension HTTPFilter {
 	/// Response filter which provides content compression.
 	/// Mime types which will be encoded or ignored can be specified with the "compressTypes" and
@@ -99,6 +101,9 @@ public extension HTTPFilter {
 					return callback(.continue)
 				}
 				if case .notModified = response.status {
+					return callback(.continue)
+				}
+				if !response.isStreaming && response.bodyBytes.count < responseMinSizeNoCompression {
 					return callback(.continue)
 				}
 				if let acceptEncoding = req.header(.acceptEncoding),
