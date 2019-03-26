@@ -87,7 +87,7 @@ public extension HTTPFilter {
 	/// containing either the full mime type or the the main type with a * wildcard. e.g. text/*
 	/// The default values for the compressTypes key are: "*/*"
 	/// The default values for the ignoreTypes key are: "image/*", "video/*", "audio/*"
-	public static func contentCompression(data: [String:Any]) throws -> HTTPResponseFilter {
+	static func contentCompression(data: [String:Any]) throws -> HTTPResponseFilter {
 		let inCompressTypes = data["compressTypes"] as? [String] ?? ["*/*"]
 		let inIgnoreTypes = data["ignoreTypes"] as? [String] ?? ["image/*", "video/*", "audio/*"]
 		

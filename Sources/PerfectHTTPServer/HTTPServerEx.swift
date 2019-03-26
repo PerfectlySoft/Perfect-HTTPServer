@@ -70,12 +70,12 @@ private var processRunAs: String?
 
 public extension HTTPServer {
 	
-	public static func runAs(_ user: String) -> HTTPServer.Type {
+	static func runAs(_ user: String) -> HTTPServer.Type {
 		processRunAs = user
 		return self
 	}
 	
-	public struct Server {
+	struct Server {
 		public let name: String
 		public let port: Int
 		public let address: String
@@ -193,12 +193,12 @@ protocol ServerInstance {
 }
 
 public extension HTTPServer {
-	public struct LaunchFailure: Error {
+	struct LaunchFailure: Error {
 		let message: String
 		let configuration: Server
 	}
 	
-	public class LaunchContext {
+	class LaunchContext {
 		private let event = Threading.Event()
 		var error: Error?
 		public var terminated = false
@@ -300,12 +300,12 @@ public extension HTTPServer {
 public extension HTTPServer {
 	
 	@discardableResult
-	public static func launch(wait: Bool = true, _ server: Server, _ servers: Server...) throws -> [LaunchContext] {
+	static func launch(wait: Bool = true, _ server: Server, _ servers: Server...) throws -> [LaunchContext] {
 		return try launch(wait: wait, [server] + servers)
 	}
 	
 	@discardableResult
-	public static func launch(wait: Bool = true, name: String, port: Int, routes: [Route],
+	static func launch(wait: Bool = true, name: String, port: Int, routes: [Route],
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
 		return try launch(wait: wait, name: name, port: port, routes: Routes(routes), requestFilters: requestFilters, responseFilters: responseFilters)
@@ -338,7 +338,7 @@ public extension HTTPServer {
 	
 	// launch with array
 	@discardableResult
-	public static func launch(wait: Bool = true, _ servers: [Server]) throws -> [LaunchContext] {
+	static func launch(wait: Bool = true, _ servers: [Server]) throws -> [LaunchContext] {
 		let ctx = try getLaunchContexts(servers)
 		try ctx.forEach { try $0.bindServer() }
 		try switchUser()
@@ -356,7 +356,7 @@ public extension HTTPServer {
 	
 	// launch one
 	@discardableResult
-	public static func launch(wait: Bool = true, name: String, port: Int, routes: Routes,
+	static func launch(wait: Bool = true, name: String, port: Int, routes: Routes,
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
 		return try launch(wait: wait, [.server(name: name, port: port, routes: routes, requestFilters: requestFilters, responseFilters: responseFilters)])[0]
@@ -364,7 +364,7 @@ public extension HTTPServer {
 	
 	// launch one with document root
 	@discardableResult
-	public static func launch(wait: Bool = true, name: String, port: Int, documentRoot root: String,
+	static func launch(wait: Bool = true, name: String, port: Int, documentRoot root: String,
 	                          requestFilters: [(HTTPRequestFilter, HTTPFilterPriority)] = [],
 	                          responseFilters: [(HTTPResponseFilter, HTTPFilterPriority)] = []) throws -> LaunchContext {
 		return try launch(wait: wait, [.server(name: name, port: port, documentRoot: root, requestFilters: requestFilters, responseFilters: responseFilters)])[0]
@@ -401,11 +401,11 @@ private extension HTTPServer.Server {
 
 public extension HTTPServer {
 	@discardableResult
-	public static func launch(wait: Bool = true, configurationPath path: String) throws -> [LaunchContext] {
+	static func launch(wait: Bool = true, configurationPath path: String) throws -> [LaunchContext] {
 		return try launch(wait: wait, configurationFile: File(path))
 	}
 	@discardableResult
-	public static func launch(wait: Bool = true, configurationFile file: File) throws -> [LaunchContext] {
+	static func launch(wait: Bool = true, configurationFile file: File) throws -> [LaunchContext] {
 		let string = try file.readString()
 		guard let jsonData = try string.jsonDecode() as? [String:Any] else {
 			throw PerfectError.apiError("Data in \(file.path) could not convert to [String:Any]")
@@ -413,7 +413,7 @@ public extension HTTPServer {
 		return try launch(wait: wait, configurationData: jsonData)
 	}
 	@discardableResult
-	public static func launch(wait: Bool = true, configurationData data: [String:Any]) throws -> [LaunchContext] {
+	static func launch(wait: Bool = true, configurationData data: [String:Any]) throws -> [LaunchContext] {
 		processRunAs = data["runAs"] as? String
 		guard let servers = data["servers"] as? [[String:Any]] else {
 			return []

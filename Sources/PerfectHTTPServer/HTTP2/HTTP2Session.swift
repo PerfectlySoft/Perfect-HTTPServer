@@ -66,6 +66,9 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 	}
 	
 	var hashValue: Int { return Int(net.fd.fd) }
+	func hash(into hasher: inout Hasher) {
+		hasher.combine(Int(net.fd.fd))
+	}
 	
 	let net: NetTCP
 	let server: HTTPServer
