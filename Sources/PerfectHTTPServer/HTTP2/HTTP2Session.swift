@@ -65,13 +65,13 @@ class HTTP2Session: Hashable, HTTP2NetErrorDelegate, HTTP2FrameReceiver {
 		return lhs.net.fd.fd == rhs.net.fd.fd
 	}
 	
-    #if swift(>=4.2)
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(Int(net.fd.fd))
-    }
-    #else
-	var hashValue: Int { return Int(net.fd.fd) }
-    #endif
+	#if swift(>=4.2)
+		func hash(into hasher: inout Hasher) {
+			hasher.combine(Int(net.fd.fd))
+		}
+	#else
+		var hashValue: Int { return Int(net.fd.fd) }
+	#endif
     
 	let net: NetTCP
 	let server: HTTPServer
