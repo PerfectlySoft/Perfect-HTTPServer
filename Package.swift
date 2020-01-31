@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
 	name: "PerfectHTTPServer",
 	products: [
-		.library(name: "PerfectHTTPServer", targets: ["PerfectHTTPServer"])
+		.library(name: "PerfectHTTPServer", type: .`dynamic`, targets: ["PerfectHTTPServer"])
 	],
 	dependencies: [
 		.package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", from: "3.1.2"),
