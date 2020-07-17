@@ -383,7 +383,11 @@ class HTTP11Request: HTTPRequest {
 			workingBuffer.removeAll()
 		case .headerField:
 			workingBuffer.append(0)
-			lastHeaderName = String(validatingUTF8: UnsafeMutableRawPointer(mutating: workingBuffer).assumingMemoryBound(to: Int8.self))
+			lastHeaderName = workingBuffer.withUnsafeBufferPointer {
+				return $0.baseAddress?.withMemoryRebound(to: Int8.self, capacity: workingBuffer.count) {
+					return String(validatingUTF8: $0)
+				}
+			}
 			workingBuffer.removeAll()
 		case .headerValue:
 			if let name = lastHeaderName {
@@ -464,10 +468,13 @@ class HTTP11Request: HTTPRequest {
 	// false indicates that the request either was fully read and is being processed or that the request failed
 	//	either way no further action should be taken
 	func didReadSomeBytes(_ b: [UInt8], callback: @escaping StatusCallback) -> Bool {
-		_ = UnsafePointer(b).withMemoryRebound(to: Int8.self, capacity: b.count) {
-			http_parser_execute(&parser, &parserSettings, $0, b.count)
+		var mutableB = b
+		_ = mutableB.withUnsafeMutableBufferPointer { buffered in
+			buffered.baseAddress?.withMemoryRebound(to: Int8.self, capacity: b.count) {
+				http_parser_execute(&parser, &parserSettings, $0, b.count)
+			}
 		}
-		
+
 		let http_errno = parser.http_errno
 		guard HPE_HEADER_OVERFLOW.rawValue != http_errno else {
 			callback(.requestEntityTooLarge)
