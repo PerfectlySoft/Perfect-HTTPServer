@@ -49,7 +49,12 @@ class ZlibStream {
 			dest.deallocate()
 		}
 		if !bytes.isEmpty {
-			stream.next_in = UnsafeMutablePointer(mutating: bytes)
+			var byts = bytes
+			byts.withUnsafeMutableBufferPointer { buffered in
+				buffered.baseAddress?.withMemoryRebound(to: Bytef.self, capacity: bytes.count) {
+					stream.next_in = $0
+				}
+			}
 			stream.avail_in = uInt(bytes.count)
 		} else {
 			stream.next_in = nil
