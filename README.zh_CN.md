@@ -1,5 +1,10 @@
 # Perfect-HTTPServer 服务器[English](README.md)
 
+> [!IMPORTANT]
+> **本项目已不再维护**，已由 [Perfect-NIO](https://github.com/PerfectlySoft/Perfect-NIO)（基于 SwiftNIO 的 Swift 6 HTTP 服务器）取代。
+> 本仓库已归档，只读。现有版本标签仍可解析；新项目请使用 [Perfect-NIO](https://github.com/PerfectlySoft/Perfect-NIO)
+> 或 [PerfectTemplate](https://github.com/PerfectlySoft/PerfectTemplate)。
+
 <p align="center">
     <a href="http://perfect.org/get-involved.html" target="_blank">
         <img src="http://perfect.org/assets/github/perfect_github_2_0_0.jpg" alt="Get Involed with Perfect!" width="854" />

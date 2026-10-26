@@ -1,5 +1,12 @@
 # Perfect-HTTPServer [简体中文](README.zh_CN.MD)
 
+> [!IMPORTANT]
+> **This package is no longer maintained.** It has been superseded by
+> [Perfect-NIO](https://github.com/PerfectlySoft/Perfect-NIO), Perfect's Swift 6 HTTP server built on SwiftNIO.
+> This repository is archived and read-only. Existing tags still resolve, and the documentation below describes
+> the last release for anyone still depending on it. For new work, start from
+> [Perfect-NIO](https://github.com/PerfectlySoft/Perfect-NIO) or [PerfectTemplate](https://github.com/PerfectlySoft/PerfectTemplate).
+
 <p align="center">
     <a href="http://perfect.org/get-involved.html" target="_blank">
         <img src="http://perfect.org/assets/github/perfect_github_2_0_0.jpg" alt="Get Involed with Perfect!" width="854" />
